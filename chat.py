@@ -7,6 +7,11 @@ from prompts import SYSTEM_PROMPT
 from tools_definitions import TOOLS
 from tools import get_current_time, calculate
 
+TOOL_FUNCTIONS= {
+    "get_current_time": get_current_time,
+    "calculate": calculate,
+}
+
 client = get_client()
 
 history = [
@@ -50,12 +55,12 @@ while True:
         for tool_call in message.tool_calls:
             tool_name = tool_call.function.name
 
-            if tool_name == "get_current_time":
-                tool_result = get_current_time()
-            elif tool_name == "calculate":
-                arguments = json.loads(tool_call.function.arguments)
-                expression = arguments["expression"]
-                tool_result = calculate(expression)
+            arguments = json.loads(tool_call.function.arguments or "{}")
+
+            tool_function = TOOL_FUNCTIONS.get(tool_name)
+
+            if tool_function:
+                tool_result = tool_function(**arguments)
             else:
                 tool_result = "Unknown tool"
 
