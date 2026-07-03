@@ -1,10 +1,11 @@
 from dotenv import load_dotenv
 import os
+import json
 from memory import load_history, save_history
 from openai_client import get_client
 from prompts import SYSTEM_PROMPT
 from tools_definitions import TOOLS
-from tools import get_current_time
+from tools import get_current_time, calculate
 
 client = get_client()
 
@@ -51,6 +52,10 @@ while True:
 
             if tool_name == "get_current_time":
                 tool_result = get_current_time()
+            elif tool_name == "calculate":
+                arguments = json.loads(tool_call.function.arguments)
+                expression = arguments["expression"]
+                tool_result = calculate(expression)
             else:
                 tool_result = "Unknown tool"
 
