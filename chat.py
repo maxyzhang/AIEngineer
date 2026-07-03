@@ -28,12 +28,19 @@ while True:
         "content": question
     })
 
-    response = client.responses.create(
-        model="gpt-5.5",
-        input=history
-    )
+    print("\nAI: ", end="", flush=True)
+    answer = ""
 
-    answer = response.output_text
+    with client.responses.stream(
+        model="gpt-5.5",
+        input=history,
+        tools=TOOLS
+    ) as stream:
+        for event in stream:
+            if event.type == "response.output_text.delta":
+                print(event.delta, end="", flush=True)
+                answer += event.delta
+    print()
 
     history.append({
         "role": "assistant",
@@ -41,6 +48,4 @@ while True:
     })
 
     save_history(history)
-    print("\nAI: ")
-    print(answer)
     print("-" * 50)
