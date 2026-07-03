@@ -27,5 +27,22 @@ TOOLS = [
                     "required": ["expression"]
                 }
             }    
+    },
+    {
+        "type": "function",
+            "function": {
+                "name": "read_file",
+                "description": "Read a local text file from the project folder.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "file_path": {
+                            "type": "string",
+                            "description": "The local file path, for example README.md"
+                        }
+                    },
+                    "required": ["file_path"]
+                }
+        }         
     }
 ]

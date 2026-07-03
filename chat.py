@@ -5,11 +5,12 @@ from memory import load_history, save_history
 from openai_client import get_client
 from prompts import SYSTEM_PROMPT
 from tools_definitions import TOOLS
-from tools import get_current_time, calculate
+from tools import get_current_time, calculate, read_file
 
 TOOL_FUNCTIONS= {
     "get_current_time": get_current_time,
     "calculate": calculate,
+    "read_file": read_file,
 }
 
 client = get_client()
