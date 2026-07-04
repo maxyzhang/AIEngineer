@@ -57,10 +57,10 @@ def get_user_memory():
     return json.dumps(load_memory(), ensure_ascii=False)
 
 def search_knowledge(question):
-    result = ""
-    query = question.lower()
-    keywords = query.split()
+    matches = []
 
+    keywords = question.lower().split()
+    
     for filename in os.listdir(KNOWLEDGE_DIR):
         path = os.path.join(KNOWLEDGE_DIR, filename)
 
@@ -74,10 +74,17 @@ def search_knowledge(question):
                 score += 1
 
         if score > 0:
-            result += f"\n--- {filename} ---\n"
-            result += text + "\n"
-    
-    if result == "":
+            matches.append((score, filename, text))
+
+    if not matches:
         return "No relevant knowledge found."
-             
+    
+    matches.sort(reverse=True)
+    
+    result = ""
+
+    for score, filename, text in matches[:3]:
+        result += f"\n--- {filename} | score: {score} ---\n"
+        result += text + "\n"
+    
     return result

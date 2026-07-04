@@ -1,9 +1,6 @@
-Current Project
+Companies
 
-Building a AI agent using GPT-5.5.
-
-Features:
-- Tool Calling
-- Memory
-- File Reading
-- Calculator
+Shell
+Baker Hughes
+Bluware
+Halliburton
