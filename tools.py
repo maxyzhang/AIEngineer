@@ -1,5 +1,8 @@
+import json
+from memory import load_memory, save_memory
 from datetime import datetime
 from pathlib import Path
+
 
 PROJECT_ROOT = Path(__file__).parent.resolve()
 
@@ -41,3 +44,12 @@ def read_file(file_path):
     
     except Exception as e:
         return str(e)
+    
+def save_user_memory(key, value):
+    memory = load_memory()
+    memory[key] = value
+    save_memory(memory)
+    return "Memory saved."
+
+def get_user_memory():
+    return json.dumps(load_memory(), ensure_ascii=False)

@@ -44,5 +44,36 @@ TOOLS = [
                     "required": ["file_path"]
                 }
         }         
+    },
+     {
+        "type": "function",
+            "function": {
+                "name": "save_user_memory",
+                "description": "Save a piece of log-term user memory.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "key": {
+                            "type": "string",
+                        },
+                        "value": {
+                            "type": "string"
+                        }
+                    },
+                    "required": ["key", "value"]
+                }
+        }         
+    },
+    {
+        "type": "function",
+            "function": {
+                "name": "get_user_memory",
+                "description": "Get all long-term user memory.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},                        
+                    "required": []
+                }
+        }       
     }
 ]

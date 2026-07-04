@@ -1,16 +1,29 @@
 from dotenv import load_dotenv
 import os
 import json
-from memory import load_history, save_history
+from memory import (
+    load_history, 
+    save_history,
+    load_memory,
+    save_memory
+)
 from openai_client import get_client
 from prompts import SYSTEM_PROMPT
 from tools_definitions import TOOLS
-from tools import get_current_time, calculate, read_file
+from tools import (
+    get_current_time, 
+    calculate, 
+    read_file,
+    save_user_memory,
+    get_user_memory
+    )
 
 TOOL_FUNCTIONS= {
     "get_current_time": get_current_time,
     "calculate": calculate,
     "read_file": read_file,
+    "save_user_memory": save_user_memory,
+    "get_user_memory": get_user_memory,
 }
 
 client = get_client()
@@ -27,11 +40,20 @@ history.extend([
     if m.get("role") != "system"
 ])
 
+memory = load_memory()
+memory_text = f"\n\nLong-term memory:\n{json.dumps(memory, ensure_ascii=False)}"
+history[0]["content"] = SYSTEM_PROMPT + memory_text
+
 print("AI Chat starts!")
 print("Input exit to quit \n")
 
 while True:
     question = input("You: ")
+
+    if "my name is" in question.lower():
+        name = question[11:].strip()
+        memory["name"] = name
+        save_memory(memory)
 
     if question.lower() == "exit":
         print("bye! ")
@@ -43,7 +65,7 @@ while True:
         print("Access denied.")
         print("-" * 50)
         continue
-    
+
     history.append({
         "role": "user",
         "content": question
