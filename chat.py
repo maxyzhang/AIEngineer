@@ -18,6 +18,7 @@ from tools import (
     get_user_memory,
     search_knowledge
     )
+from vector_search import search_vector
 
 TOOL_FUNCTIONS= {
     "get_current_time": get_current_time,
@@ -68,9 +69,21 @@ while True:
         print("-" * 50)
         continue
 
+    context = search_vector(question)
+
+    enhanced_prompt = f"""
+    knowledge:
+
+    {context}
+
+    User Question:
+
+    {question}
+    """
+
     history.append({
         "role": "user",
-        "content": question
+        "content": enhanced_prompt
     })
 
     response = client.chat.completions.create(

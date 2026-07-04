@@ -1,9 +1,4 @@
-Roadmap
-
-1. Tool Calling
-2. Memory
-3. RAG 
-4. Vector Database
-5. MCP
-6. Node Export
-7. Contour
+CUDA
+HPC
+Node Export
+Contour
