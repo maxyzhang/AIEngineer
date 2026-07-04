@@ -1,8 +1,10 @@
 import json
+import os
 from memory import load_memory, save_memory
 from datetime import datetime
 from pathlib import Path
 
+KNOWLEDGE_DIR = "knowledge"
 
 PROJECT_ROOT = Path(__file__).parent.resolve()
 
@@ -53,3 +55,29 @@ def save_user_memory(key, value):
 
 def get_user_memory():
     return json.dumps(load_memory(), ensure_ascii=False)
+
+def search_knowledge(question):
+    result = ""
+    query = question.lower()
+    keywords = query.split()
+
+    for filename in os.listdir(KNOWLEDGE_DIR):
+        path = os.path.join(KNOWLEDGE_DIR, filename)
+
+        with open(path, "r", encoding="utf-8") as f:
+            text = f.read()
+        text_lower = text.lower()
+
+        score = 0
+        for word in keywords:
+            if word in text_lower:
+                score += 1
+
+        if score > 0:
+            result += f"\n--- {filename} ---\n"
+            result += text + "\n"
+    
+    if result == "":
+        return "No relevant knowledge found."
+             
+    return result

@@ -1,5 +1,6 @@
 {
   "name": "Max",
   "likes": "Tesla",
-  "location": "Houston"
+  "location": "Houston",
+  "favorite_stock": "NVDA"
 }

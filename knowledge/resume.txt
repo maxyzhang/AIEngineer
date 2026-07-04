@@ -1,0 +1,33 @@
+Name: Max Zhang
+
+Title:
+Senior Software Engineer
+
+Summary:
+30+ years software development experience.
+
+Work Experience
+- Shell
+- Baker Hughes
+- Bluware
+- Halliburton
+
+Worked on:
+- High Performance Computing (HPC)
+- CUDA GPU Computing
+- NVIDIA Dice / Index
+- Linux RHEL 8 and RHEL 9
+- Python
+- C++
+- AI Engineering
+- Jupyter Notebook
+- MongoDB
+- Oracle
+- Agile SAFe 
+
+Main Responsibilities:
+-- Developed HPC applications CDIS
+-- Migrated Linux systems.
+-- Optimized GPU performance.
+-- Integrated AI workflows.
+-- Improved software architecture.

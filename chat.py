@@ -15,7 +15,8 @@ from tools import (
     calculate, 
     read_file,
     save_user_memory,
-    get_user_memory
+    get_user_memory,
+    search_knowledge
     )
 
 TOOL_FUNCTIONS= {
@@ -24,6 +25,7 @@ TOOL_FUNCTIONS= {
     "read_file": read_file,
     "save_user_memory": save_user_memory,
     "get_user_memory": get_user_memory,
+    "search_knowledge": search_knowledge,
 }
 
 client = get_client()

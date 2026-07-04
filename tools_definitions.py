@@ -75,5 +75,22 @@ TOOLS = [
                     "required": []
                 }
         }       
+    },
+    {
+        "type": "function",
+            "function": {
+                "name": "search_knowledge",
+                "description": "Search local knowledge files to answer questions about Max, his resume, company, project, or notes.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "question":{
+                            "type": "string",
+                            "description": "The user's question to search for in the knowledge base."
+                        }
+                    },
+                    "required": ["question"]
+                }
+        }    
     }
 ]
