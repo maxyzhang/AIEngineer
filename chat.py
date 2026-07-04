@@ -36,6 +36,14 @@ while True:
     if question.lower() == "exit":
         print("bye! ")
         break
+    blocked_requests = [".env", "api key", "apikey", "token", "password"]
+
+    if any(word in question.lower() for word in blocked_requests):
+        print("\nAI:")
+        print("Access denied.")
+        print("-" * 50)
+        continue
+    
     history.append({
         "role": "user",
         "content": question
