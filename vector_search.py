@@ -1,12 +1,44 @@
+import os
 import chromadb
 from sentence_transformers import SentenceTransformer
+
+KNOWLEDGE_DIR = "knowledge"
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
 client = chromadb.PersistentClient(path="chromadb_db")
 collection = client.get_or_create_collection("knowledge")
 
-def search_vector(question, top_k=3):
+def keyword_search(question):
+    hits = []
+    keywords = question.lower().split()
+
+    for root, dirs, files in os.walk(KNOWLEDGE_DIR):
+        for filename in files:
+            if not filename.endswith(".txt"):
+                continue
+
+            path = os.path.join(root, filename)
+            relative_path = os.path.relpath(path, KNOWLEDGE_DIR)
+
+            with open(path, "r", encoding="utf-8") as f:
+                text = f.read()
+
+            score = 0
+            text_lower = text.lower()
+
+            for word in keywords:
+                if word in text_lower:
+                    score += 1
+
+            if score > 0:
+                hits.append((score, relative_path, text))
+
+        hits.sort(reverse=True)
+        return hits[:3]    
+
+
+def search_vector(question, top_k=5):
     query_embedding = model.encode(question).tolist()
 
     results = collection.query(
@@ -19,9 +51,30 @@ def search_vector(question, top_k=3):
     distances = results["distances"][0]
 
     output = ""
+    sources = []
 
     for doc, meta, distance in zip(documents, metadatas, distances):
-        output += f"\n---{meta['file']} | distance: {distance} ---\n"
+        file = meta.get("file", "unkown")
+        chunk = meta.get("chunk", "old")
+
+        sources.append(file)
+
+        output += f"\n---{meta['file']} | chunk: {meta.get('chunk', 'old')} | distance: {distance} ---\n"
         output += doc + "\n"
+
+    output += "\nKeyword Search Results:\n"
+    keyword_hits = keyword_search(question)
+
+    for score, file, text in keyword_hits:
+        sources.append(file)
+
+        output += f"\n--- Source: {file} | keyword score: {score}---\n"
+        output += text + "\n"
+
+    unique_sources = list(dict.fromkeys(sources))
+
+    output += "\n\nSources:\n"
+    for source in unique_sources:
+        output += f"- {source}\n"
 
     return output

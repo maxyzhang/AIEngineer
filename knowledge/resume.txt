@@ -6,13 +6,13 @@ Senior Software Engineer
 Summary:
 30+ years software development experience.
 
-Work Experience
+Companies:
 - Shell
 - Baker Hughes
 - Bluware
 - Halliburton
 
-Worked on:
+Skills:
 - High Performance Computing (HPC)
 - CUDA GPU Computing
 - NVIDIA Dice / Index
@@ -24,10 +24,3 @@ Worked on:
 - MongoDB
 - Oracle
 - Agile SAFe 
-
-Main Responsibilities:
--- Developed HPC applications CDIS
--- Migrated Linux systems.
--- Optimized GPU performance.
--- Integrated AI workflows.
--- Improved software architecture.
