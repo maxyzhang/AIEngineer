@@ -1,6 +1,7 @@
 from openai_client import get_client
 from tools.search_tool import run as search_tool 
 from tools.calculator_tool import run as calculator_tool
+from memory import load_memory, save_memory
 
 client = get_client()
 
@@ -31,6 +32,8 @@ def parse_plan(plan):
 
 
 def run(question, max_steps=3):
+    memory = load_memory()
+    memory_text = str(memory)
     history = ""
 
     for step in range(1, max_steps + 1):
@@ -40,6 +43,9 @@ You are a ReAct-style AI agent.
 Available tools:
 1. search - use for Max, resume, projects, Shell, CDIS, NVIDIA, DICE, interview, career, knowledge base.
 2. calculator - use for math calculations.
+
+long-tem memory:
+{memory_text}
 
 User question:
 {question}
@@ -78,6 +84,8 @@ Input: final answer
         action, tool_input = parse_plan(plan)
 
         if action.lower() == "final":
+            memory["last_question"] = question
+            save_memory(memory)
             return tool_input
 
         observation = call_tool(action, tool_input)
@@ -113,4 +121,7 @@ Do not invent facts.
         messages=[{"role": "user", "content": final_prompt}]
     )
 
-    return final_response.choices[0].message.content
+    answer =  final_response.choices[0].message.content
+    memory["last_question"] = question
+    save_memory(memory)
+    return answer
