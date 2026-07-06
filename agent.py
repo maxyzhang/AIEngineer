@@ -4,6 +4,7 @@ from agents.resume_agent import run as run_resume
 from agents.career_agent import run as run_career
 from vector_search import search_vector 
 from openai_client import get_client
+from workflows.career_workflow import run as run_career_workflow
 
 client = get_client()
 
@@ -27,7 +28,7 @@ while True:
         answer = run_resume(question)
 
     elif intent == "career":
-        answer = run_career(question)
+        answer = run_career_workflow(question)
 
     else:
         context = search_vector(question)
