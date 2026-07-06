@@ -1,0 +1,26 @@
+Project: CDIS
+
+Company:
+Shell
+
+Max worked on CDIS at Shell.
+
+Role:
+Backend technical lead / Senior Software Engineer contractor
+
+Responsibilities:
+- Designed backend architecture
+- Developed CDIS backend features
+- Improved CDIS workflow
+- Supported HPC integration
+- Worked with Python and C++
+- Used MongoDB and Oracle
+- Worked in Agile SAFe
+
+Related technologies:
+HPC
+Python
+C++
+MongoDB
+Oracle
+Linux

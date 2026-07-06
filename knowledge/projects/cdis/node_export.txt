@@ -1,0 +1,20 @@
+Project: Node Export
+
+Company:
+Shell
+
+Max worked on Node Export as part of CDIS.
+
+Responsibilities:
+- Redesigned the workflow
+- Added node export functionality
+- Implemented backend logic
+- Integrated the feature into the existing CDIS workflow
+- Supported developers using the new workflow
+
+Related technologies:
+Python
+C++
+Backend
+Workflow
+CDIS

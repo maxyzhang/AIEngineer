@@ -9,11 +9,42 @@ model = SentenceTransformer("all-MiniLM-L6-v2")
 client = chromadb.PersistentClient(path="chromadb_db")
 collection = client.get_or_create_collection("knowledge")
 
+def detect_folder(question):
+    q = question.lower()
+
+    if "node export" in q or "cdis" in q:
+        return os.path.join("knowledge", "projects", "cdis")
+    
+    if "nvidia" in q or "cuda" in q or "dice" in q or "index" in q:
+        return os.path.join("knowledge", "projects", "nvidia")
+    
+    if "linux" in q or "rhel" in q or "migration" in q:
+        return os.path.join("knowledge", "projects", "linux_migration")
+    
+    if "shell" in q or "company" in q:
+        return os.path.join("knowledge", "companies")
+    
+    if "skill" in q or "python" in q or "mongodb" in q or "oracle" in q:
+        return os.path.join("knowledge", "skills")
+    
+    if "education" in q or "degree" in q or "university" in q:
+        return os.path.join("knowledge", "education")
+    
+    if any(word in q for word in ["interview", "tell me about yourself", "leadership", "collaboration", "challenge"]):
+        return os.path.join("knowledge", "interview")
+    
+    return None
+
+
 def keyword_search(question):
     hits = []
     keywords = question.lower().split()
+    target_folder = detect_folder(question)
 
     for root, dirs, files in os.walk(KNOWLEDGE_DIR):
+        if target_folder and not root.startswith(target_folder):
+            continue
+
         for filename in files:
             if not filename.endswith(".txt"):
                 continue
@@ -63,7 +94,7 @@ def search_vector(question, top_k=5):
         output += doc + "\n"
 
     output += "\nKeyword Search Results:\n"
-    keyword_hits = keyword_search(question)
+    keyword_hits = keyword_search(question) or []
 
     for score, file, text in keyword_hits:
         sources.append(file)
