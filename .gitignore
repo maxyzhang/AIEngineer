@@ -10,3 +10,5 @@ __pycache__/
 chromadb_db/
 
 history.json
+
+memory.json
