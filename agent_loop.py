@@ -17,18 +17,37 @@ def call_tool(action, tool_input):
     return f"Unknown tool: {action}"
 
 
-def run(question):
-    planner_prompt = f"""
-You are an AI agent.
+def parse_plan(plan):
+    action = "final"
+    tool_input = plan
+
+    for line in plan.splitlines():
+        if line.lower().startswith("action:"):
+            action = line.split(":", 1)[1].strip()
+        elif line.lower().startswith("input:"):
+            tool_input = line.split(":", 1)[1].strip()
+
+    return action, tool_input
+
+
+def run(question, max_steps=3):
+    history = ""
+
+    for step in range(1, max_steps + 1):
+        planner_prompt = f"""
+You are a ReAct-style AI agent.
 
 Available tools:
-1. search - use this for questions about Max, resume, projects, Shell, CDIS, NVIDIA, DICE, interview, career, knowledge base.
-2. calculator - use this for math calculations.
+1. search - use for Max, resume, projects, Shell, CDIS, NVIDIA, DICE, interview, career, knowledge base.
+2. calculator - use for math calculations.
 
 User question:
 {question}
 
-Decide if a tool is needed.
+Previous steps and observations:
+{history}
+
+Decide the next step.
 
 Respond ONLY in this format:
 
@@ -46,32 +65,33 @@ Action: final
 Input: final answer
 """
 
-    planner_response = client.chat.completions.create(
-        model="gpt-5.5",
-        messages=[{"role": "user", "content": planner_prompt}]
-    )
+        planner_response = client.chat.completions.create(
+            model="gpt-5.5",
+            messages=[{"role": "user", "content": planner_prompt}]
+        )
 
-    plan = planner_response.choices[0].message.content.strip()
+        plan = planner_response.choices[0].message.content.strip()
 
-    print("\n[Plan]")
-    print(plan)
+        print(f"\n[Step {step} Plan]")
+        print(plan)
 
-    action = "final"
-    tool_input = plan
+        action, tool_input = parse_plan(plan)
 
-    for line in plan.splitlines():
-        if line.lower().startswith("action:"):
-            action = line.split(":", 1)[1].strip()
-        elif line.lower().startswith("input:"):
-            tool_input = line.split(":", 1)[1].strip()
+        if action.lower() == "final":
+            return tool_input
 
-    if action.lower() == "final":
-        return tool_input
+        observation = call_tool(action, tool_input)
 
-    observation = call_tool(action, tool_input)
+        print(f"\n[Step {step} Observation]")
+        print(observation)
 
-    print("\n[Observation]")
-    print(observation)
+        history += f"""
+Step {step}
+Action: {action}
+Input: {tool_input}
+Observation:
+{observation}
+"""
 
     final_prompt = f"""
 You are an AI agent.
@@ -79,15 +99,12 @@ You are an AI agent.
 User question:
 {question}
 
-You used this tool:
-{action}
-
-Tool observation:
-{observation}
+You have completed these tool steps:
+{history}
 
 Now write the final answer.
 
-Use only the observation when it contains candidate/project facts.
+Use only the observations when they contain candidate/project facts.
 Do not invent facts.
 """
 
