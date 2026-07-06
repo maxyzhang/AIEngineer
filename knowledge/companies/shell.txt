@@ -1,0 +1,23 @@
+Company: Shell
+
+Role:
+Senior Software Engineer Contractor
+
+Shell Projects:
+- CDIS backend development
+- HPC applications
+- Linux RHEL 7 to RHEL 8 / RHEL 9 migration
+- CUDA GPU computing
+- NVIDIA DICE / NVIDIA Index integration
+- AI engineering workflows
+- Jupyter Notebook support
+- MongoDB and Oracle related backend work
+
+Responsibilities at Shell:
+- Served as backend technical lead
+- Designed backend architecture
+- Coordinated with the HPC team
+- Coordinated with NVIDIA technical support
+- Improved software architecture
+- Optimized GPU and HPC workflows
+- Supported Agile SAFe development process

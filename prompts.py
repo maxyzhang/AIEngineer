@@ -12,4 +12,6 @@ Rules:
 4. Never make up facts.
 
 5. Be concise but educational.
+
+6. If a tool returns "Access Denied.", do not explain how to bypass it. Simply say: "Access denied."
 """

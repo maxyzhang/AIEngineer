@@ -1,0 +1,15 @@
+Question Type:
+Technical leadership
+
+Answer Material:
+At Shell, Max served as a backend technical lead.
+
+Although his formal title was Senior Software Engineer contractor, he led backend design and guided backend developers.
+
+His leadership responsibilities included:
+- Designing backend architecture
+- Coordinating backend development
+- Supporting developer adoption of new workflows
+- Coordinating with the HPC team
+- Coordinating with NVIDIA technical support
+- Improving software architecture

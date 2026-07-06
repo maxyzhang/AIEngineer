@@ -1,0 +1,29 @@
+Project: NVIDIA DICE / NVIDIA Index
+
+Company:
+Shell
+
+Max worked with NVIDIA DICE / NVIDIA Index at Shell.
+
+Context:
+NVIDIA DICE / NVIDIA Index was used in Shell's HPC and GPU computing environment.
+
+Max's responsibilities:
+- Worked with NVIDIA DICE / NVIDIA Index related integration
+- Supported CUDA GPU computing workflows
+- Coordinated with NVIDIA technical support
+- Coordinated with the Shell HPC team
+- Helped troubleshoot GPU / visualization / HPC-related issues
+- Supported backend integration with CDIS and HPC workflows
+- Helped improve GPU performance and system architecture
+
+Related technologies:
+NVIDIA DICE
+NVIDIA Index
+CUDA
+GPU Computing
+HPC
+Linux
+C++
+Python
+CDIS

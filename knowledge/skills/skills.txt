@@ -1,0 +1,17 @@
+Programming
+
+Python
+C++
+C#
+JavaScript
+
+Linux
+CUDA
+OpenMP
+MongoDB
+Oracle
+AI
+RAG
+Vector Database
+LLM
+MCP

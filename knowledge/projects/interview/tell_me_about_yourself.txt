@@ -1,0 +1,19 @@
+Question Type:
+Tell me about yourself
+
+Answer Material:
+Max Zhang is a Senior Software Engineer with 30+ years of software development experience.
+
+He has strong experience in:
+- Backend development
+- HPC applications
+- Linux systems
+- CUDA GPU computing
+- NVIDIA DICE / NVIDIA Index
+- Python and C++
+- MongoDB and Oracle
+- AI engineering workflows
+
+At Shell, Max worked as a Senior Software Engineer contractor. He worked on CDIS backend development, HPC workflows, NVIDIA DICE / Index integration, and Linux RHEL migration.
+
+He also served as a backend technical lead, coordinated with the HPC team, and worked with NVIDIA technical support.

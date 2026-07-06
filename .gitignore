@@ -7,4 +7,6 @@ __pycache__/
 
 .vscode/
 
+chromadb_db/
+
 history.json
