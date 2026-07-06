@@ -20,5 +20,17 @@ def route(question):
         "tailor"
     ]):
         return "resume"
+    
+    if any(word in q for word in [
+        "job",
+        "role",
+        "position",
+        "apply",
+        "application",
+        "fit",
+        "career",
+        "recruiter"
+    ]):
+        return "career"
 
     return "knowledge"

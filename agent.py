@@ -1,6 +1,7 @@
 from agents.router import route
 from agents.interview_agent import run as run_interview 
 from agents.resume_agent import run as run_resume 
+from agents.career_agent import run as run_career
 from vector_search import search_vector 
 from openai_client import get_client
 
@@ -24,6 +25,9 @@ while True:
 
     elif intent == "resume":
         answer = run_resume(question)
+
+    elif intent == "career":
+        answer = run_career(question)
 
     else:
         context = search_vector(question)
