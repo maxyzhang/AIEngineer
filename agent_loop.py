@@ -129,7 +129,12 @@ User question:
 Previous steps and observations:
 {history}
 
-Decide the next step.
+Decide the next best step.
+
+You may call multiple tools across multiple steps.
+Do NOT choose final until you have enough observations to answer.
+If the question compares multiple things, search each thing separately.
+If the question requires math after search, search first, then calculate.
 
 Respond ONLY in this format:
 
@@ -143,6 +148,7 @@ Input: math expression
 
 OR
 
+Only choose final when no more tool calls are needed.
 Action: final
 Input: done
 """
