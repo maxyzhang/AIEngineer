@@ -53,3 +53,8 @@ def get_conversation_context():
         context += f"Assistant: {turn['assistant']}\n\n"
 
     return context
+
+def clear_conversation_memory():
+    memory = load_memory()
+    memory["conversation_history"] = []
+    save_memory(memory)
