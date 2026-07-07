@@ -1,9 +1,9 @@
 from openai_client import get_client
 from tools.search_tool import run as search_tool 
-from tools.calculator_tool import run as calculator_tool
+from tools.calculator_tool import run as calculator_tool 
 from memory import (
-    load_memory, 
-    save_memory, 
+    load_memory,
+    save_memory,
     add_conversation_turn,
     get_conversation_context,
 )
@@ -35,6 +35,7 @@ def parse_plan(plan):
 
     return action, tool_input
 
+
 def reflect_answer(question, history, answer):
     prompt = f"""
 You are a strict AI answer reviewer.
@@ -42,29 +43,68 @@ You are a strict AI answer reviewer.
 User question:
 {question}
 
+Tool observations:
+{history}
+
 Draft answer:
 {answer}
 
-Check if the answer is grounded in the obeservation.
+Check if the answer is grounded in the observations.
 
 Respond ONLY with:
 
 PASS
 
 or
+
 RETRY: search query
 """
+
     response = client.chat.completions.create(
-        model = "gpt-5.5",
-        messages=[{"role": "user", "content": prompt}]
+        model="gpt-5.5",
+        messages=[{"role": "user", "content": prompt}],
     )
 
     return response.choices[0].message.content.strip()
 
+
+def generate_final_answer(question, history):
+    final_prompt = f"""
+You are an AI assistant.
+
+User question:
+{question}
+
+Updated observations:
+{history}
+
+Write the final answer using only the observations.
+Do not invent facts.
+"""
+
+    print("\nAI:\n")
+
+    stream = client.chat.completions.create(
+        model="gpt-5.5",
+        messages=[{"role": "user", "content": final_prompt}],
+        stream=True,
+    )
+
+    answer = ""
+
+    for chunk in stream:
+        delta = chunk.choices[0].delta.content
+        if delta:
+            print(delta, end="", flush=True)
+            answer += delta
+
+    print()
+    return answer
+
+
 def run(question, max_steps=3):
     memory = load_memory()
     memory_text = str(memory)
-
     conversation_context = get_conversation_context()
 
     history = ""
@@ -77,7 +117,7 @@ Available tools:
 1. search - use for Max, resume, projects, Shell, CDIS, NVIDIA, DICE, interview, career, knowledge base.
 2. calculator - use for math calculations.
 
-long-tem memory:
+Long-term memory:
 {memory_text}
 
 Recent conversation:
@@ -104,12 +144,12 @@ Input: math expression
 OR
 
 Action: final
-Input: final answer
+Input: done
 """
 
         planner_response = client.chat.completions.create(
             model="gpt-5.5",
-            messages=[{"role": "user", "content": planner_prompt}]
+            messages=[{"role": "user", "content": planner_prompt}],
         )
 
         plan = planner_response.choices[0].message.content.strip()
@@ -120,24 +160,7 @@ Input: final answer
         action, tool_input = parse_plan(plan)
 
         if action.lower() == "final":
-            answer = tool_input
-            review = reflect_answer(question, history, answer)
-
-            print("\n[Reflection]")
-            print(review)
-
-            if review.startswith("RETRY:"):
-                tool_input = review.replace("RETRY:", "").strip()
-
-                print("\n[Retry Search]")
-                print(tool_input)
-
-                observation = call_tool("search", tool_input)
-                print(observation)
-
-            memory["last_question"] = question
-            save_memory(memory)
-            return answer
+            break
 
         observation = call_tool(action, tool_input)
 
@@ -152,45 +175,7 @@ Observation:
 {observation}
 """
 
-    final_prompt = f"""
-You are an AI agent.
-
-User question:
-{question}
-
-You have completed these tool steps:
-{history}
-
-Now write the final answer.
-
-Use only the observations when they contain candidate/project facts.
-Do not invent facts.
-"""
-    print("\nAI:\n")
-
-    stream = client.chat.completions.create(
-        model="gpt-5.5",
-        messages=[
-            {
-                "role": "user", 
-                "content": final_prompt
-            }
-        ],
-        stream=True
-    )
-
-    answer =  final_response.choices[0].message.content
-
-    add_conversation_turn(question, answer)
-    answer =  ""
-
-    for chunk in stream:
-        delta = chunk.choices[0].delta.content
-
-        if delta:
-            print(delta, end="", flush=True)
-            answer += delta
-    print()
+    answer = generate_final_answer(question, history)
 
     review = reflect_answer(question, history, answer)
 
@@ -208,35 +193,17 @@ Do not invent facts.
         print(observation)
 
         history += f"""
+Retry Search:
+{tool_input}
 
-        Retry Search:
-        {tool_input}    
+Observation:
+{observation}
+"""
 
-        Observation:
-        {observation}
-        """
+        answer = generate_final_answer(question, history)
 
-        final_prompt = f"""
-        You are an AI assistant.
+    add_conversation_turn(question, answer)
 
-        User question:
-        {question}
-
-        Updated observations:
-        {history}
-
-        Write the final answer using only the observations.
-        Do not invent facts.
-        """
-
-        final_response = client.chat.completions.create(
-            model="gpt-5.5",
-            messages=[{"role": "user", "content": final_prompt}]
-        )
-        answer = final_response.choices[0].message.content
-
-        add_conversation_turn(question, answer)
-    
     memory["last_question"] = question
     save_memory(memory)
 
