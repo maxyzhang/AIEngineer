@@ -102,14 +102,15 @@ Do not invent facts.
     return answer
 
 
-def run(question, max_steps=3):
+def run(question, max_steps=6):
     memory = load_memory()
     memory_text = str(memory)
     conversation_context = get_conversation_context()
 
     history = ""
+    step = 1
 
-    for step in range(1, max_steps + 1):
+    while True:
         planner_prompt = f"""
 You are a ReAct-style AI agent.
 
@@ -131,7 +132,9 @@ Previous steps and observations:
 
 Decide the next best step.
 
-You may call multiple tools across multiple steps.
+You are inside an autonomous planning loop.
+At each step, choose exactly one next action.
+You may continue using tools until you have enough evidence.
 Do NOT choose final until you have enough observations to answer.
 If the question compares multiple things, search each thing separately.
 If the question requires math after search, search first, then calculate.
@@ -180,6 +183,11 @@ Input: {tool_input}
 Observation:
 {observation}
 """
+        step += 1
+
+        if step > max_steps:
+            print("\n[Max steps reached]")
+            break
 
     answer = generate_final_answer(question, history)
 
