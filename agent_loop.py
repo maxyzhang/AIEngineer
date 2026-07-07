@@ -35,6 +35,31 @@ def parse_plan(plan):
 
     return action, tool_input
 
+def reflect_answer(question, history, answer):
+    prompt = f"""
+You are a strict AI answer reviewer.
+
+User question:
+{question}
+
+Draft answer:
+{answer}
+
+Check if the answer is grounded in the obeservation.
+
+Respond ONLY with:
+
+PASS
+
+or
+RETRY: search query
+"""
+    response = client.chat.completions.create(
+        model = "gpt-5.5",
+        messages=[{"role": "user", "content": prompt}]
+    )
+
+    return response.choices[0].message.content.strip()
 
 def run(question, max_steps=3):
     memory = load_memory()
@@ -95,9 +120,24 @@ Input: final answer
         action, tool_input = parse_plan(plan)
 
         if action.lower() == "final":
+            answer = tool_input
+            review = reflect_answer(question, history, answer)
+
+            print("\n[Reflection]")
+            print(review)
+
+            if review.startswith("RETRY:"):
+                tool_input = review.replace("RETRY:", "").strip()
+
+                print("\n[Retry Search]")
+                print(tool_input)
+
+                observation = call_tool("search", tool_input)
+                print(observation)
+
             memory["last_question"] = question
             save_memory(memory)
-            return tool_input
+            return answer
 
         observation = call_tool(action, tool_input)
 
@@ -126,16 +166,77 @@ Now write the final answer.
 Use only the observations when they contain candidate/project facts.
 Do not invent facts.
 """
+    print("\nAI:\n")
 
-    final_response = client.chat.completions.create(
+    stream = client.chat.completions.create(
         model="gpt-5.5",
-        messages=[{"role": "user", "content": final_prompt}]
+        messages=[
+            {
+                "role": "user", 
+                "content": final_prompt
+            }
+        ],
+        stream=True
     )
 
     answer =  final_response.choices[0].message.content
 
     add_conversation_turn(question, answer)
+    answer =  ""
 
+    for chunk in stream:
+        delta = chunk.choices[0].delta.content
+
+        if delta:
+            print(delta, end="", flush=True)
+            answer += delta
+    print()
+
+    review = reflect_answer(question, history, answer)
+
+    print("\n[Reflection]")
+    print(review)
+
+    if review.startswith("RETRY:"):
+        tool_input = review.replace("RETRY:", "").strip()
+
+        print("\n[Retry Search]")
+        print(tool_input)
+
+        observation = call_tool("search", tool_input)
+
+        print(observation)
+
+        history += f"""
+
+        Retry Search:
+        {tool_input}    
+
+        Observation:
+        {observation}
+        """
+
+        final_prompt = f"""
+        You are an AI assistant.
+
+        User question:
+        {question}
+
+        Updated observations:
+        {history}
+
+        Write the final answer using only the observations.
+        Do not invent facts.
+        """
+
+        final_response = client.chat.completions.create(
+            model="gpt-5.5",
+            messages=[{"role": "user", "content": final_prompt}]
+        )
+        answer = final_response.choices[0].message.content
+
+        add_conversation_turn(question, answer)
+    
     memory["last_question"] = question
     save_memory(memory)
 
