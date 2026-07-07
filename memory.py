@@ -15,9 +15,11 @@ def save_history(history):
         json.dump(history, file, ensure_ascii=False, indent=2)
 
 def load_memory():
-    if os.path.exists(MEMORY_FILE):
+    try:
         with open(MEMORY_FILE, "r", encoding="utf-8") as file:
-            return json.load(file)
+            data = json.load(file)
+            return data or {}   
+    except:
         return {}
     
 def save_memory(memory):
