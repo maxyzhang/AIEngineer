@@ -1,7 +1,12 @@
 from openai_client import get_client
 from tools.search_tool import run as search_tool 
 from tools.calculator_tool import run as calculator_tool
-from memory import load_memory, save_memory
+from memory import (
+    load_memory, 
+    save_memory, 
+    add_conversation_turn,
+    get_conversation_context,
+)
 
 client = get_client()
 
@@ -59,6 +64,9 @@ RETRY: search query
 def run(question, max_steps=3):
     memory = load_memory()
     memory_text = str(memory)
+
+    conversation_context = get_conversation_context()
+
     history = ""
 
     for step in range(1, max_steps + 1):
@@ -71,6 +79,9 @@ Available tools:
 
 long-tem memory:
 {memory_text}
+
+Recent conversation:
+{conversation_context}
 
 User question:
 {question}
@@ -168,6 +179,9 @@ Do not invent facts.
         stream=True
     )
 
+    answer =  final_response.choices[0].message.content
+
+    add_conversation_turn(question, answer)
     answer =  ""
 
     for chunk in stream:
@@ -221,6 +235,9 @@ Do not invent facts.
         )
         answer = final_response.choices[0].message.content
 
+        add_conversation_turn(question, answer)
+    
     memory["last_question"] = question
     save_memory(memory)
+
     return answer
