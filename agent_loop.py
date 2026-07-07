@@ -155,13 +155,28 @@ Now write the final answer.
 Use only the observations when they contain candidate/project facts.
 Do not invent facts.
 """
+    print("\nAI:\n")
 
-    final_response = client.chat.completions.create(
+    stream = client.chat.completions.create(
         model="gpt-5.5",
-        messages=[{"role": "user", "content": final_prompt}]
+        messages=[
+            {
+                "role": "user", 
+                "content": final_prompt
+            }
+        ],
+        stream=True
     )
 
-    answer =  final_response.choices[0].message.content
+    answer =  ""
+
+    for chunk in stream:
+        delta = chunk.choices[0].delta.content
+
+        if delta:
+            print(delta, end="", flush=True)
+            answer += delta
+    print()
 
     review = reflect_answer(question, history, answer)
 
