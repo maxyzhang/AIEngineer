@@ -7,8 +7,12 @@ from memory import (
     add_conversation_turn,
     get_conversation_context,
 )
+import math
+from sentence_transformers import SentenceTransformer
 
 client = get_client()
+
+query_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 def normalize_search_query(query):
     words = query.lower().replace("-", " ").replace("/", " ").split()
@@ -23,6 +27,16 @@ def normalize_search_query(query):
 
     return " ".join(key_words)
 
+def cosine_similarity(a, b):
+    dot = sum(x * y for x, y in zip(a, b))
+
+    norm_a = math.sqrt(sum(x * x for x in a))
+    norm_b = math.sqrt(sum(y * y for y in b))
+
+    if norm_a == 0 or norm_b == 0:
+        return 0
+    
+    return dot / (norm_a * norm_b)
 
 def extract_sources(observation):
     sources = []
@@ -144,6 +158,7 @@ def run(question, max_steps=6):
     no_new_source_count = 0
 
     searched_queries = set()
+    query_embeddings = []
 
     step = 1
 
@@ -221,22 +236,32 @@ Input: done
 
         action, tool_input = parse_plan(plan)
 
-        normalized_query = normalize_search_query(tool_input)
-
-        if action.lower() == "search":
-
-            if normalized_query in searched_queries:
-                print("\n[Stopping: repeated search query]")
-                break
-
-            searched_queries.add(normalized_query)
-
         if action.lower() == "final":
             break
 
+        if action.lower() == "search":
+            normalized_query = normalize_search_query(tool_input)
+
+            embedding = query_model.encode(normalized_query)
+
+            duplicate = False
+
+            for old_embedding in query_embeddings:
+                similarity = cosine_similarity(embedding, old_embedding)
+
+                if similarity > 0.90:
+                    duplicate = True
+                    break
+            if duplicate:
+                print("\n[Stopping: semantically repeated search]")
+                break
+            searched_queries.add(normalized_query)
+            query_embeddings.append(embedding)
+        
         observation = call_tool(action, tool_input)
 
         if action.lower() == "search":
+            
             current_sources = set(extract_sources(observation))
             new_sources = current_sources - visited_sources
 
