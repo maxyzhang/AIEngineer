@@ -129,6 +129,8 @@ def run(question, max_steps=6):
     visited_sources = set()
     no_new_source_count = 0
 
+    searched_queries = set()
+
     step = 1
 
     while True:
@@ -198,6 +200,14 @@ Input: done
 
         action, tool_input = parse_plan(plan)
 
+        normalized_query = tool_input.lower().strip()
+
+        if action.lower() == "search":
+            if normalized_query in searched_queries:
+                print("\n[Stopping: repeated search query]")
+                break
+            searched_queries.add(normalized_query)
+
         if action.lower() == "final":
             break
 
@@ -220,6 +230,13 @@ Input: done
 
             observation += f"- Consecutive searches with no new sources: {no_new_source_count}\n"
 
+            if no_new_source_count >= 2:
+                print("\n[Stopping: two searches with no new sources]")
+                break
+
+            if "Comparison: COMPLETE" in observation:
+                print("\n[Stopping: coverage complete]")
+                break
 
         print(f"\n[Step {step} Observation]")
         print(observation)
@@ -231,10 +248,11 @@ Input: {tool_input}
 Observation:
 {observation}
 """
+        # Safety guard only
         step += 1
 
         if step > max_steps:
-            print("\n[Max steps reached]")
+            print("\n[Safety stop: max steps reached]")
             break
 
     answer = generate_final_answer(question, history)
