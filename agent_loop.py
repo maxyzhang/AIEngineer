@@ -138,6 +138,7 @@ You may call search multiple times.
 Use the observations from previous steps.
 
 Important decision rules:
+0. If Coverage Summary contains MISSING or INCOMPLETE, perform another search with a differnt query
 1. If Overall search quality is LOW, perform another search with a different query.
 2. If the user compares multiple topics (for example CUDA vs ROCm), search each topi separately before answering.
 3. If evidence exists for only one side of a comparison, search for the missing side.
