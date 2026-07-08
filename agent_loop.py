@@ -70,6 +70,48 @@ def render_task_list(tasks, current_task=None):
 
     return "\n".join(lines)
 
+def reflect(question, history, observation):
+    reflection_prompt = f"""
+You are reviewing the current research progress.
+
+User question:
+{question}
+
+Latest observation:
+{observation}
+
+Previous history:
+{history}
+
+Determine:
+1. Is there enough evidence to answer?
+2. What information is still missing?
+3. Should another search be performed?
+
+Return exactly in this format:
+
+Decision:
+ANSWER
+
+Reason:
+...
+
+OR
+
+Decision:
+SEARCH
+
+Reason:
+...
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-5.5",
+        messages=[{"role": "user", "content": reflection_prompt}],
+    )
+
+    return response.choices[0].message.content.strip()
+
 def normalize_search_query(query):
     words = query.lower().replace("-", " ").replace("/", " ").split()
 
