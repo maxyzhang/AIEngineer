@@ -210,6 +210,16 @@ RETRY: search query
 
     return response.choices[0].message.content.strip()
 
+def reflection_decision(reflection):
+    if "Decision:" not in reflection:
+        return "SEARCH"
+    
+    decision = (
+        reflection.split("Decision:")[1]
+        .splitlines()[0]
+        .strip()
+        .upper()
+    )
 
 def generate_final_answer(question, history):
     final_prompt = f"""
@@ -323,6 +333,7 @@ You may call search multiple times.
 Use the observations from previous steps.
 
 Important decision rules:
+DO NOT choose final before at least one search action has been executed and at least one Search Reflection has been produced.
 0. If Coverage Summary contains MISSING or INCOMPLETE, 
    perform ONE search using a different angle if that angle has not been explored.
 1. If Overall search quality is LOW, perform another search with a different query.
@@ -364,8 +375,14 @@ Input: math expression
 OR
 
 Only choose final when no more tool calls are needed.
-Action: final
-Input: done
+==============================================
+Planner Decision
+==============================================
+Action: FINAL
+Reason:
+Reflection determined enough evidence.
+
+Generating final answer ...
 """
 
         planner_response = client.chat.completions.create(
@@ -380,7 +397,18 @@ Input: done
 
         action, tool_input = parse_plan(plan)
 
+        # Guard: do not allow final before any search/reflection
+        if step == 1 and action.lower() == "final":
+            print("\n[Guard] Final is not allowed before search. Forcing search.\n")
+            action = "search"
+            tool_input = question
+
         if action.lower() == "final":
+            print("\n[Planner Decision]")
+            print("=" * 60)
+            print("Action: FINAL")
+            print("Reason: Planner decided no more tool calls are needed.")
+            print("Generating final answer...")
             break
 
         if action.lower() == "search":
@@ -409,27 +437,23 @@ Input: done
             observation
         )
 
-        print("\n[Reflection]")
+        print("\n[Search Reflection]")
         print("=" * 60)
         print(reflection)
 
+        decision = reflection_decision(reflection)
 
+        
         if action.lower() == "search":
             
             current_sources = set(extract_sources(observation))
             new_sources = current_sources - visited_sources
-
             visited_sources.update(current_sources)
 
             observation += "\nNew Source Summary:\n"
             observation += f"- Current sources: {len(current_sources)}\n"
             observation += f"- New sources found: {len(new_sources)}\n"
-
-            # Mark the current research task as comppleted
-            if current_task_index < len(research_tasks):
-                research_tasks[current_task_index]["done"] = True
-                current_task_index += 1
-
+                
             if len(new_sources) == 0:
                 no_new_source_count += 1
             else:
@@ -437,13 +461,28 @@ Input: done
 
             observation += f"- Consecutive searches with no new sources: {no_new_source_count}\n"
 
-            if no_new_source_count >= 2:
-                print("\n[Stopping: two searches with no new sources]")
-                break
+        # Mark the current research task as comppleted
+        if current_task_index < len(research_tasks):
+            research_tasks[current_task_index]["done"] = True
+            current_task_index += 1
+        
+        # save history
+        print(f"\n[Step {step} Observation]")
+        print(observation)
 
-            if "Comparison: COMPLETE" in observation:
-                print("\n[Stopping: coverage complete]")
-                break
+        history += f"""
+        Step {step}
+        Action: {action}
+        Input: {tool_input}
+        Observation:
+        {observation}
+        """
+
+        if decision == "ANSWER":
+            print("\nStopping: reflection says enough evidence.\n")
+            break
+
+
 
         print(f"\n[Step {step} Observation]")
         print(observation)
@@ -466,7 +505,7 @@ Observation:
 
     review = reflect_answer(question, history, answer)
 
-    print("\n[Reflection]")
+    print("\n[Answer Review]")
     print(review)
 
     if review.startswith("RETRY:"):
