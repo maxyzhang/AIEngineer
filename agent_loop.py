@@ -14,6 +14,37 @@ client = get_client()
 
 query_model = SentenceTransformer("all-MiniLM-L6-v2")
 
+def create_research_plan(question):
+    prompt = f"""
+You are a research planning agent.
+
+Create a short research plan for answering the user question.
+
+User question:
+{question}
+
+Rules:
+- Use 2 to 5 steps.
+- Each step should be a concrete search or final synthesis.
+- For comparison questions, include one step for each side.
+- For experience questions, include resume/project/context evidence.
+- Do not answer the question yet.
+
+Respond ONLY in this format:
+
+Research Plan:
+1. ...
+2. ...
+3. ...
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-5.5",
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    return response.choices[0].message.content
+
 def normalize_search_query(query):
     words = query.lower().replace("-", " ").replace("/", " ").split()
 
@@ -154,6 +185,10 @@ def run(question, max_steps=6):
 
     history = ""
 
+    research_plan = create_research_plan(question)
+    print("\n[Research Plan]")
+    print(research_plan)
+
     visited_sources = set()
     no_new_source_count = 0
 
@@ -173,6 +208,12 @@ You are a ReAct-style AI agent.
 Available tools:
 1. search - use for Max, resume, projects, Shell, CDIS, NVIDIA, DICE, interview, career, knowledge base.
 2. calculator - use for math calculations.
+
+Research plan:
+{research_plan}
+
+Follow this research plan unless previous observations show enough evidence to answer.
+Choose the next unfinished step.
 
 Long-term memory:
 {memory_text}
@@ -214,7 +255,7 @@ Important decision rules:
     Instead, continue with another aspect or produce the final answer.
 11. If all major aspects of the question have already been investigated, 
     produce the final answer even if some evidence is missing.
-12. If Coverage Summary contains Overall: ENOUGH, choose final.
+12. If Coverage Summary contains Overall: ENOUGH, choose final.exit
 
 Coverage Summary
 
