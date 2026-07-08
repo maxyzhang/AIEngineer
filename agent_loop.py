@@ -10,6 +10,23 @@ from memory import (
 
 client = get_client()
 
+def extract_sources(observation):
+    sources = []
+
+    in_sources = False
+    for line in observation.splitlines():
+        line = line.strip()
+
+        if line == "Sources:":
+            in_sources = True
+            continue
+
+        if in_sources:
+            if not line.startswith("- "):
+                break
+            sources.append(line[2:].strip())
+
+    return sources
 
 def call_tool(action, tool_input):
     action = action.lower().strip()
@@ -108,6 +125,10 @@ def run(question, max_steps=6):
     conversation_context = get_conversation_context()
 
     history = ""
+
+    visited_sources = set()
+    no_new_source_count = 0
+
     step = 1
 
     while True:
@@ -144,6 +165,7 @@ Important decision rules:
 3. If evidence exists for only one side of a comparison, search for the missing side.
 4. Only choose FINAL when there is enough evidence to answer the complete question.
 5. If math is required after gathering information, perform the calculation only after searching.
+6. If Consecutive searches with no new sources is 2 or more, choose final.
 
 Do not stop early.
 
@@ -180,6 +202,24 @@ Input: done
             break
 
         observation = call_tool(action, tool_input)
+
+        if action.lower() == "search":
+            current_sources = set(extract_sources(observation))
+            new_sources = current_sources - visited_sources
+
+            visited_sources.update(current_sources)
+
+            observation += "\nNew Source Summary:\n"
+            observation += f"- Current sources: {len(current_sources)}\n"
+            observation += f"- New sources found: {len(new_sources)}\n"
+
+            if len(new_sources) == 0:
+                no_new_source_count += 1
+            else:
+                no_new_source_count = 0
+
+            observation += f"- Consecutive searches with no new sources: {no_new_source_count}\n"
+
 
         print(f"\n[Step {step} Observation]")
         print(observation)
