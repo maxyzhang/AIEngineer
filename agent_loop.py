@@ -133,11 +133,18 @@ Previous steps and observations:
 Decide the next best step.
 
 You are inside an autonomous planning loop.
-At each step, choose exactly one next action.
-You may continue using tools until you have enough evidence.
-Do NOT choose final until you have enough observations to answer.
-If the question compares multiple things, search each thing separately.
-If the question requires math after search, search first, then calculate.
+At each step, choose exactly ONE action.
+You may call search multiple times.
+Use the observations from previous steps.
+
+Important decision rules:
+1. If Overall search quality is LOW, perform another search with a different query.
+2. If the user compares multiple topics (for example CUDA vs ROCm), search each topi separately before answering.
+3. If evidence exists for only one side of a comparison, search for the missing side.
+4. Only choose FINAL when there is enough evidence to answer the complete question.
+5. If math is required after gathering information, perform the calculation only after searching.
+
+Do not stop early.
 
 Respond ONLY in this format:
 

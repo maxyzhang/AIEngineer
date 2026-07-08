@@ -88,9 +88,16 @@ def search_vector(question, top_k=5):
         file = meta.get("file", "unkown")
         chunk = meta.get("chunk", "old")
 
+        if distance < 0.9:
+            confidence = "high"
+        elif distance < 1.2:
+            confidence = "medium"
+        else:
+            confidence = "low"
+
         sources.append(file)
 
-        output += f"\n---{meta['file']} | chunk: {meta.get('chunk', 'old')} | distance: {distance} ---\n"
+        output += f"\n---{meta['file']} | chunk: {chunk} | distance: {distance: .3f} | confidence: {confidence} ---\n"
         output += doc + "\n"
 
     output += "\nKeyword Search Results:\n"
@@ -108,4 +115,18 @@ def search_vector(question, top_k=5):
     for source in unique_sources:
         output += f"- {source}\n"
 
+    low_count = output.count("confidence: low")
+    medium_count = output.count("confidence: medium")
+    high_count = output.count("confidence: high")
+
+    output += "\nSearch Confidence Summary:\n"
+    output += f"- High confidence results: {high_count}\n"
+    output += f"- Medium confidence results: {medium_count}\n"
+    output += f"- Low confidence results: {low_count}\n"
+
+    if low_count > high_count + medium_count:
+        output += "_ Overall search quality: LOW\n"
+    else:
+        output += "_ Overall search quality: ACCEPTABLE\n"
+        
     return output
