@@ -183,8 +183,10 @@ Recent conversation:
 User question:
 {question}
 
-Previous search queries:
+Previous search queries already attempted:
 {searched_query_text}
+
+Do not repeat these. Pick the next missing angle.
 
 Previous steps and observations:
 {history}
@@ -197,13 +199,31 @@ You may call search multiple times.
 Use the observations from previous steps.
 
 Important decision rules:
-0. If Coverage Summary contains MISSING or INCOMPLETE, perform another search with a differnt query
+0. If Coverage Summary contains MISSING or INCOMPLETE, 
+   perform ONE search using a different angle if that angle has not been explored.
 1. If Overall search quality is LOW, perform another search with a different query.
 2. If the user compares multiple topics (for example CUDA vs ROCm), search each topi separately before answering.
 3. If evidence exists for only one side of a comparison, search for the missing side.
 4. Only choose FINAL when there is enough evidence to answer the complete question.
 5. If math is required after gathering information, perform the calculation only after searching.
 6. If Consecutive searches with no new sources is 2 or more, choose final.
+7. For comparison questions, search each side separately before final.
+8. For experience questions, search resume/project/context evidence befoe final.
+9. You may plan multiple search steps across the loop, but return exactly ONE next action each time.
+10. If previous observation already conclude that evidence is missing, do NOT search for the same missing topic again. 
+    Instead, continue with another aspect or produce the final answer.
+11. If all major aspects of the question have already been investigated, 
+    produce the final answer even if some evidence is missing.
+12. If Coverage Summary contains Overall: ENOUGH, choose final.
+
+Coverage Summary
+
+ROCm Missing
+
+Planner
+
+DO NOT SEARCH ROCm AGAIN
+
 
 Do not stop early.
 
@@ -270,6 +290,11 @@ Input: done
             observation += "\nNew Source Summary:\n"
             observation += f"- Current sources: {len(current_sources)}\n"
             observation += f"- New sources found: {len(new_sources)}\n"
+
+            if "ROCm: MISSING" in observation and "CUDA" in observation:
+                observation += "- Overall: ENOUGH\n"
+            else:
+                observation += "- OVerall: INCOMPLETE\n"
 
             if len(new_sources) == 0:
                 no_new_source_count += 1
