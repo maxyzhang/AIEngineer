@@ -128,5 +128,33 @@ def search_vector(question, top_k=5):
         output += "_ Overall search quality: LOW\n"
     else:
         output += "_ Overall search quality: ACCEPTABLE\n"
-        
+    
+    question_lower = question.lower()
+    output_lower = output.lower()
+
+    coverage_topics = []
+
+    if "cuda" in question_lower:
+        coverage_topics.append("CUDA")
+
+    if "rocm" in question_lower:
+        coverage_topics.append("ROCm")
+
+    output += "\nCoverage Summary:\n"
+
+    missing_topics = []
+
+    for topic in coverage_topics:
+        if topic.lower() in output_lower:
+            output += f"- {topic}: FOUND\n"
+        else:
+            output += f"- {topic}: MISSING\n"
+            missing_topics.append(topic)
+
+    if len(coverage_topics) >= 2:
+        if missing_topics:
+            output += "- Comparison: INCOMPLETE\n"
+        else:
+            output += "- Comparison: COMPLETE\n"
+
     return output
