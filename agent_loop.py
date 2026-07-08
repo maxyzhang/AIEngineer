@@ -45,6 +45,28 @@ Research Plan:
 
     return response.choices[0].message.content
 
+def parse_research_plan(plan_text):
+    tasks = []
+
+    for line in plan_text.splitlines():
+        line = line.strip()
+
+        if len(line) > 2 and line[0].isdigit() and line[1] == ".":
+            task = line.split(".", 1)[1].strip()
+            tasks.append({"task": task, "done": False})
+
+    return tasks
+
+
+def render_task_list(tasks):
+    lines = []
+
+    for task in tasks:
+        mark = "✓" if task["done"] else "□"
+        lines.append(f"{mark} {task['task']}")
+
+    return "\n".join(lines)
+
 def normalize_search_query(query):
     words = query.lower().replace("-", " ").replace("/", " ").split()
 
@@ -188,6 +210,8 @@ def run(question, max_steps=6):
     research_plan = create_research_plan(question)
     print("\n[Research Plan]")
     print(research_plan)
+    research_tasks = parse_research_plan(research_plan)
+    current_task_index = 0
 
     visited_sources = set()
     no_new_source_count = 0
@@ -211,6 +235,12 @@ Available tools:
 
 Research plan:
 {research_plan}
+
+Task Status:
+{render_task_list(research_tasks)}
+
+Follow the first unfinished task.
+When a search action completes, that task will be marked done.
 
 Follow this research plan unless previous observations show enough evidence to answer.
 Choose the next unfinished step.
@@ -332,10 +362,10 @@ Input: done
             observation += f"- Current sources: {len(current_sources)}\n"
             observation += f"- New sources found: {len(new_sources)}\n"
 
-            if "ROCm: MISSING" in observation and "CUDA" in observation:
-                observation += "- Overall: ENOUGH\n"
-            else:
-                observation += "- OVerall: INCOMPLETE\n"
+            # Mark the current research task as comppleted
+            if current_task_index < len(research_tasks):
+                research_tasks[current_task_index]["done"] = True
+                current_task_index += 1
 
             if len(new_sources) == 0:
                 no_new_source_count += 1
