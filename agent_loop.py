@@ -10,6 +10,20 @@ from memory import (
 
 client = get_client()
 
+def normalize_search_query(query):
+    words = query.lower().replace("-", " ").replace("/", " ").split()
+
+    stop_words = {
+        "compare", "comparison", "vs", "versus", "and", "or",
+        "the", "a", "an", "with", "for", "about", "overview",
+        "details", "detail", "explain"
+    }
+
+    key_words = sorted(set(w for w in words if w not in stop_words))
+
+    return " ".join(key_words)
+
+
 def extract_sources(observation):
     sources = []
 
@@ -207,7 +221,7 @@ Input: done
 
         action, tool_input = parse_plan(plan)
 
-        normalized_query = tool_input.lower().strip()
+        normalized_query = normalize_search_query(tool_input)
 
         if action.lower() == "search":
 
