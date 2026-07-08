@@ -134,6 +134,10 @@ def run(question, max_steps=6):
     step = 1
 
     while True:
+        searched_query_text = "\n".join(
+        f"- {q}" for q in searched_queries
+        ) or "None yet"
+
         planner_prompt = f"""
 You are a ReAct-style AI agent.
 
@@ -149,6 +153,9 @@ Recent conversation:
 
 User question:
 {question}
+
+Previous search queries:
+{searched_query_text}
 
 Previous steps and observations:
 {history}
@@ -203,9 +210,11 @@ Input: done
         normalized_query = tool_input.lower().strip()
 
         if action.lower() == "search":
+
             if normalized_query in searched_queries:
                 print("\n[Stopping: repeated search query]")
                 break
+
             searched_queries.add(normalized_query)
 
         if action.lower() == "final":
