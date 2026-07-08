@@ -58,12 +58,15 @@ def parse_research_plan(plan_text):
     return tasks
 
 
-def render_task_list(tasks):
+def render_task_list(tasks, current_task=None):
     lines = []
 
-    for task in tasks:
+    for i, task in enumerate(tasks):
         mark = "✓" if task["done"] else "□"
-        lines.append(f"{mark} {task['task']}")
+        pointer = "<- NEXT" if current_task == i else ""
+        lines.append(
+            f"{i+1}. {mark} {task['task']}{pointer}"
+            )
 
     return "\n".join(lines)
 
@@ -226,6 +229,14 @@ def run(question, max_steps=6):
         f"- {q}" for q in searched_queries
         ) or "None yet"
 
+        task_status = render_task_list(
+            research_tasks,
+            current_task=current_task_index,
+            )
+        print("\n[Task Status]")
+        print("=" * 60)
+        print(task_status)
+
         planner_prompt = f"""
 You are a ReAct-style AI agent.
 
@@ -237,7 +248,7 @@ Research plan:
 {research_plan}
 
 Task Status:
-{render_task_list(research_tasks)}
+{task_status}
 
 Follow the first unfinished task.
 When a search action completes, that task will be marked done.
