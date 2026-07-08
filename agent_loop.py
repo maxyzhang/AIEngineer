@@ -403,6 +403,16 @@ Input: done
             query_embeddings.append(embedding)
         
         observation = call_tool(action, tool_input)
+        reflection = reflect(
+            question,
+            history,
+            observation
+        )
+
+        print("\n[Reflection]")
+        print("=" * 60)
+        print(reflection)
+
 
         if action.lower() == "search":
             
