@@ -9,6 +9,7 @@ from memory import (
 )
 import math
 from sentence_transformers import SentenceTransformer
+from tool_router import call_tool
 
 client = get_client()
 
@@ -159,7 +160,7 @@ def extract_sources(observation):
 
     return sources
 
-def call_tool(action, tool_input):
+def call_tool_old(action, tool_input):
     action = action.lower().strip()
 
     if action == "search":
