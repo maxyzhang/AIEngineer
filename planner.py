@@ -4,8 +4,16 @@ client = get_client()
 
 
 def create_plan(question, memory_text="", conversation_context=""):
+
+    #print("\n==========================MEMORY============")
+    #print(memory_text)
+    #print("\n=============================================")
     prompt = f"""
 You are an AI agent planner.
+
+If the user's question asks what you remember, or ask about the user's project, profile, preference, or prior context,
+prioritize Long-term memory before using search.
+If long-term memory directly answers the question, choose final.
 
 Available tools:
 - search: use for resume, projects, experience, interview, career, knowledge base questions

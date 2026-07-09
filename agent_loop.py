@@ -4,8 +4,11 @@ from tools.calculator_tool import run as calculator_tool
 from memory import (
     load_memory,
     save_memory,
+    get_memory_text,
     add_conversation_turn,
     get_conversation_context,
+    extract_memory,
+    merge_memory,
 )
 import math
 from sentence_transformers import SentenceTransformer
@@ -297,7 +300,7 @@ Do not invent facts.
 
 def run(question, max_steps=6):
     memory = load_memory()
-    memory_text = str(memory)
+    memory_text = get_memory_text(memory)
     conversation_context = get_conversation_context()
 
     history = ""
@@ -422,6 +425,13 @@ Reflection determined enough evidence.
 
 Generating final answer ...
 """
+        #print("================MEMEORY========================")
+        #print(memory_text)
+        #print("=========================================")
+
+        #print("=================CONVERSATION==============")
+        #print(conversation_context)
+        #print("===========================================")
         plan = create_plan(
             question,
             memory_text=memory_text,
@@ -434,7 +444,7 @@ Generating final answer ...
         action, tool_input = parse_plan(plan)
 
         # Guard: do not allow final before any search/reflection
-        if step == 1 and action.lower() == "final":
+        if step == 1 and action.lower() == "final" and not memory_text.strip():
             print("\n[Guard] Final is not allowed before search. Forcing search.\n")
             action = "search"
             tool_input = question
@@ -468,6 +478,9 @@ Generating final answer ...
             answer = observation
             add_conversation_turn(question, answer)
             memory["last_question"] = question
+            memory["last_answer"] = answer
+            new_facts = extract_memory(question, answer)
+            memory = merge_memory(memory, new_facts)
             save_memory(memory)
             return answer
         
@@ -532,7 +545,10 @@ Generating final answer ...
 
     answer = tool_input if action == "final" else generate_final_answer(question, history)
 
-    review = reflect_answer(question, history, answer)
+    if action == "final":
+        review = "PASS"
+    else:
+        review = reflect_answer(question, history, answer)
 
     print("\n[Answer Review]")
     print(review)
@@ -560,6 +576,10 @@ Observation:
     add_conversation_turn(question, answer)
 
     memory["last_question"] = question
+    memory["last_answer"] = answer
+
+    new_facts = extract_memory(question, answer)
+    memory = merge_memory(memory, new_facts)
     save_memory(memory)
 
     return answer
