@@ -10,6 +10,7 @@ from memory import (
 import math
 from sentence_transformers import SentenceTransformer
 from tool_router import call_tool
+from planner import create_plan
 
 client = get_client()
 
@@ -421,13 +422,11 @@ Reflection determined enough evidence.
 
 Generating final answer ...
 """
-
-        planner_response = client.chat.completions.create(
-            model="gpt-5.5",
-            messages=[{"role": "user", "content": planner_prompt}],
+        plan = create_plan(
+            question,
+            memory_text=memory_text,
+            conversation_context=conversation_context,
         )
-
-        plan = planner_response.choices[0].message.content.strip()
 
         print(f"\n[Step {step} Plan]")
         print(plan)
@@ -464,6 +463,14 @@ Generating final answer ...
             query_embeddings.append(query_embedding)
         
         observation = call_tool(action, tool_input)
+
+        if action.lower() == "calculator":
+            answer = observation
+            add_conversation_turn(question, answer)
+            memory["last_question"] = question
+            save_memory(memory)
+            return answer
+        
         reflection = reflect(
             question,
             history,
@@ -475,6 +482,12 @@ Generating final answer ...
         print(reflection)
 
         decision = reflection_decision(reflection)
+
+        if decision.strip().upper() == "ANSWER":
+            print("\nReflection determined enough evidence.\n")
+            action = "final"
+            tool_input = generate_final_answer(question, history)
+            break
 
         if action.lower() == "search":
             
@@ -510,10 +523,6 @@ Generating final answer ...
             observation,
         )
 
-        if decision == "ANSWER":
-            print("\nReflection determined enough evidence.\n")
-            break
-
         # Prevent infinite planning loops
         step += 1
 
@@ -521,7 +530,7 @@ Generating final answer ...
             print("\n[Safety stop: max steps reached]")
             break
 
-    answer = generate_final_answer(question, history)
+    answer = tool_input if action == "final" else generate_final_answer(question, history)
 
     review = reflect_answer(question, history, answer)
 
