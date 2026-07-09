@@ -84,9 +84,9 @@ Previous history:
 {history}
 
 Determine:
-1. Is there enough evidence to answer?
-2. What information is still missing?
-3. Should another search be performed?
+1. Is there enough evidence to answer the user's question?
+2. If not, what information is still missing?
+3. Would another search likely improve answer?
 
 Return exactly in this format:
 
@@ -113,17 +113,22 @@ Reason:
     return response.choices[0].message.content.strip()
 
 def normalize_search_query(query):
-    words = query.lower().replace("-", " ").replace("/", " ").split()
+    words = (
+        query.lower()
+        .replace("-", " ")
+        .replace("/", " ")
+        .split()
+    )
 
-    stop_words = {
+    ignored_words = {
         "compare", "comparison", "vs", "versus", "and", "or",
         "the", "a", "an", "with", "for", "about", "overview",
         "details", "detail", "explain"
     }
 
-    key_words = sorted(set(w for w in words if w not in stop_words))
+    keywords = sorted(set(w for w in words if w not in ignored_words))
 
-    return " ".join(key_words)
+    return " ".join(keywords)
 
 def cosine_similarity(a, b):
     dot = sum(x * y for x, y in zip(a, b))
@@ -132,7 +137,7 @@ def cosine_similarity(a, b):
     norm_b = math.sqrt(sum(y * y for y in b))
 
     if norm_a == 0 or norm_b == 0:
-        return 0
+        return 0.0
     
     return dot / (norm_a * norm_b)
 
@@ -163,14 +168,14 @@ def call_tool(action, tool_input):
     if action == "calculator":
         return calculator_tool(tool_input)
 
-    return f"Unknown tool: {action}"
+    return f"Unknown tool: {action}. Supported tools: search, calculator"
 
 
 def parse_plan(plan):
-    action = "final"
-    tool_input = plan
+    action = "search"
+    tool_input = ""
 
-    for line in plan.splitlines():
+    for line in plan.strip().splitlines():
         if line.lower().startswith("action:"):
             action = line.split(":", 1)[1].strip()
         elif line.lower().startswith("input:"):
@@ -210,16 +215,49 @@ RETRY: search query
 
     return response.choices[0].message.content.strip()
 
+def append_history(history, step, action, tool_input, observation):
+    print(f"\n[Step {step} Observation]")
+    print(observation)
+
+    return history + f"""
+Step {step}
+Action: {action}
+Input: {tool_input}
+Observation:
+{observation}
+"""
+
+
+def run_search_action(action, tool_input, query_embeddings, searched_queries):
+    normalized_query = normalize_search_query(tool_input)
+    query_embedding = query_model.encode(normalized_query)
+
+    for old_embedding in query_embeddings:
+        similarity = cosine_similarity(query_embedding, old_embedding)
+        if similarity > 0.90:
+            print("\n[Stopping: semantically repeated search]")
+            return None, True
+
+    searched_queries.add(normalized_query)
+    query_embeddings.append(query_embedding)
+
+    observation = call_tool(action, tool_input)
+    return observation, False
+
 def reflection_decision(reflection):
     if "Decision:" not in reflection:
         return "SEARCH"
+    try:
+        decision = (
+            reflection.split("Decision:")[1]
+            .splitlines()[0]
+            .strip()
+            .upper()
+        )
+    except IndexError:
+        return "SEARCH"
     
-    decision = (
-        reflection.split("Decision:")[1]
-        .splitlines()[0]
-        .strip()
-        .upper()
-    )
+    return decision if decision in ("SEARCH", "ANSWER") else "SEARCH"
 
 def generate_final_answer(question, history):
     final_prompt = f"""
@@ -333,9 +371,7 @@ You may call search multiple times.
 Use the observations from previous steps.
 
 Important decision rules:
-DO NOT choose final before at least one search action has been executed and at least one Search Reflection has been produced.
-0. If Coverage Summary contains MISSING or INCOMPLETE, 
-   perform ONE search using a different angle if that angle has not been explored.
+0. Do not choose FINAL until at least one successful search has completed and the evidence is sufficient.
 1. If Overall search quality is LOW, perform another search with a different query.
 2. If the user compares multiple topics (for example CUDA vs ROCm), search each topi separately before answering.
 3. If evidence exists for only one side of a comparison, search for the missing side.
@@ -404,22 +440,18 @@ Generating final answer ...
             tool_input = question
 
         if action.lower() == "final":
-            print("\n[Planner Decision]")
-            print("=" * 60)
-            print("Action: FINAL")
-            print("Reason: Planner decided no more tool calls are needed.")
-            print("Generating final answer...")
+            print("\nPlanner requested FINAL.")
             break
 
         if action.lower() == "search":
             normalized_query = normalize_search_query(tool_input)
 
-            embedding = query_model.encode(normalized_query)
+            query_embedding = query_model.encode(normalized_query)
 
             duplicate = False
 
             for old_embedding in query_embeddings:
-                similarity = cosine_similarity(embedding, old_embedding)
+                similarity = cosine_similarity(query_embedding, old_embedding)
 
                 if similarity > 0.90:
                     duplicate = True
@@ -428,7 +460,7 @@ Generating final answer ...
                 print("\n[Stopping: semantically repeated search]")
                 break
             searched_queries.add(normalized_query)
-            query_embeddings.append(embedding)
+            query_embeddings.append(query_embedding)
         
         observation = call_tool(action, tool_input)
         reflection = reflect(
@@ -443,7 +475,6 @@ Generating final answer ...
 
         decision = reflection_decision(reflection)
 
-        
         if action.lower() == "search":
             
             current_sources = set(extract_sources(observation))
@@ -461,7 +492,7 @@ Generating final answer ...
 
             observation += f"- Consecutive searches with no new sources: {no_new_source_count}\n"
 
-        # Mark the current research task as comppleted
+        # Mark task done only after a search action completes
         if current_task_index < len(research_tasks):
             research_tasks[current_task_index]["done"] = True
             current_task_index += 1
@@ -470,31 +501,19 @@ Generating final answer ...
         print(f"\n[Step {step} Observation]")
         print(observation)
 
-        history += f"""
-        Step {step}
-        Action: {action}
-        Input: {tool_input}
-        Observation:
-        {observation}
-        """
+        history = append_history(
+            history,
+            step,
+            action,
+            tool_input,
+            observation,
+        )
 
         if decision == "ANSWER":
-            print("\nStopping: reflection says enough evidence.\n")
+            print("\nReflection determined enough evidence.\n")
             break
 
-
-
-        print(f"\n[Step {step} Observation]")
-        print(observation)
-
-        history += f"""
-Step {step}
-Action: {action}
-Input: {tool_input}
-Observation:
-{observation}
-"""
-        # Safety guard only
+        # Prevent infinite planning loops
         step += 1
 
         if step > max_steps:
@@ -516,6 +535,7 @@ Observation:
 
         observation = call_tool("search", tool_input)
 
+        print("\n[Retry Observation]")
         print(observation)
 
         history += f"""
@@ -525,7 +545,6 @@ Retry Search:
 Observation:
 {observation}
 """
-
         answer = generate_final_answer(question, history)
 
     add_conversation_turn(question, answer)
