@@ -69,24 +69,32 @@ def keyword_search(question):
         return hits[:3]    
 
 
-def search_vector(question, top_k=5):
+def search_vector(question, top_k=15):
     query_embedding = model.encode(question).tolist()
 
     results = collection.query(
         query_embeddings=[query_embedding],
-        n_results=top_k
+        n_results=top_k,
+        include=["documents", "metadatas", "distances"]
     )
+    #print("="*60)
+    #print(results)
+    #print("="*60)
 
     documents = results["documents"][0]
     metadatas = results["metadatas"][0]
     distances = results["distances"][0]
 
+    # print("DEBUG files:", [m.get("file") for m in metadatas])
     output = ""
     sources = []
 
     for doc, meta, distance in zip(documents, metadatas, distances):
         file = meta.get("file", "unkown")
         chunk = meta.get("chunk", "old")
+
+        if distance > 1.3:
+            continue
 
         if distance < 0.9:
             confidence = "high"

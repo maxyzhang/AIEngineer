@@ -1,0 +1,24 @@
+Project: NVIDIA CUDA
+
+Company:
+Shell
+
+Max worked on CUDA GPU computing inside Shell HPC.
+
+Responsibilities:
+- CUDA GPU programming support
+- GPU performance optimization
+- CUDA workflow integration
+- NVIDIA technical support collaboration
+- GPU memory optimization
+- HPC cluster support
+- Linux GPU environment
+
+Technologies:
+CUDA
+GPU
+NVIDIA
+HPC
+Linux
+C++
+Python

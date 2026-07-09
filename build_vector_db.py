@@ -40,6 +40,7 @@ for root, dirs, files in os.walk(KNOWLEDGE_DIR):
             continue
 
         path = os.path.join(root, filename)
+        print(path)
         relative_path = os.path.relpath(path, KNOWLEDGE_DIR)
 
         with open(path, "r", encoding="utf-8") as f:

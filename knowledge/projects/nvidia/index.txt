@@ -1,0 +1,9 @@
+Project: NVIDIA Index
+
+Max worked with NVIDIA Index at Shell in an HPC/GPU visualization environment.
+
+Experience:
+- Supported NVIDIA Index integration
+- Worked with GPU visualization workflows
+- Helped troubleshoot backend, GPU, and visualization issues
+- Coordinated with NVIDIA technical support and Shell HPC team Best Regards,

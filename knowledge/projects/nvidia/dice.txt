@@ -1,0 +1,9 @@
+Project: NVIDIA DICE
+
+Max worked with NVIDIA DICE at Shell as part of GPU visualization and HPC integration.
+
+Experience:
+- Supported NVIDIA DICE integration
+- Helped troubleshoot visualization and GPU-related issues
+- Coordinated with Shell HPC team and NVIDIA technical support
+- Supported backend integration with CDIS and HPC workflows Best Regards,
