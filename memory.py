@@ -7,10 +7,49 @@ from openai_client import get_client
 
 MEMORY_FILE = "memory.json"
 HISTORY_FILE = "history.json"  # agent step history
-CONVERSATION_FILE = "conversation..json"  # user chat history
+CONVERSATION_FILE = "conversation.json"  # user chat history
 
 client = get_client()
 memory_model = SentenceTransformer("all-MiniLM-L6-v2")
+
+def rank_memories(items):
+    normalized_items = []
+
+    for item in items:
+        normalized = normalize_memory_item(item)
+
+        if normalized["text"]:
+            normalized_items.append(normalized)
+
+    return sorted(
+        normalized_items,
+        key=lambda item: (
+            item["importance"],
+            item["access_count"],
+            item["created_at"],
+        ),
+        reverse=True,
+    )
+
+def normalize_memory_item(item):
+    now = datetime.now().isoformat()
+
+    if isinstance(item, dict):
+        return {
+            "text": item.get("text", "").strip(),
+            "importance": int(item.get("importance", 5)),
+            "access_count": int(item.get("access_count", 0)),
+            "created_at": item.get("created_at", now),
+            "last_accessed": item.get("last_accessed", ""),
+        }
+
+    return {
+        "text": str(item).strip(),
+        "importance": 5,
+        "access_count": 0,
+        "created_at": now,
+        "last_accessed": None,
+    }
 
 def clear_conversation_memory():
     save_history([])
@@ -31,18 +70,12 @@ def save_conversation(conversation):
 
 def get_memory_text(memory, limit=10):
     items = memory.get("long_term_memory", [])
-    lines = []
-
-    for item in items[-limit:]:
-        if isinstance(item, dict):
-            text = item.get("text", "")
-        else:
-            text = str(item)
-        
-        if text:
-            lines.append(f"- {text}")
-
-    return "\n".join(lines)
+    ranked_items = rank_memories(items)[:limit]
+    
+    return "\n".join(
+        f"= {item['text']}"
+        for item in ranked_items
+    )
 
 def extract_memory(question, answer):
     prompt = f"""
@@ -70,11 +103,32 @@ User question:
 Assistant answer:
 {answer}
 
+Assign an importance score to every memory.
+
+10 = User identity
+9 = Current long-term project
+8 = Long-tem goal or profession
+7 = Strong preference
+6 = Stable skill or knowledge
+5 = General background fact
+
+If thr memory describes the user's CURRENT project or product, always assign importance 9.
+
+If a memory describes the user's profession or long-term career, assign importance 8.
+
+Do not assign importance 5 to a current long-term project.
+
 Return ONLY JSON in this format:
 {{
   "facts": [
-    "fact 1",
-    "fact 2"
+    {{
+        "text": "fact 1",
+        "importance": 8
+    }},
+    {{
+        "text": "fact 2,
+        "importance": 6
+    }}
   ]
 }}
 """
@@ -165,7 +219,11 @@ def merge_memory(
     if "long_term_memory" not in memory:
         memory["long_term_memory"] = []
 
-    existing_facts = memory["long_term_memory"]
+    # 先把旧字符串格式统一转换成带 metadata 的 dict
+    existing_facts = [
+        normalize_memory_item(item)
+        for item in memory["long_term_memory"]
+    ]
 
     bad_phrases = [
         "i don't have",
@@ -177,34 +235,55 @@ def merge_memory(
         "no evidence",
     ]
 
-    for fact in new_facts:
-        if not isinstance(fact, str):
+    for item in new_facts:
+        # 兼容旧版字符串和新版 dict
+        if isinstance(item, dict):
+            text = str(item.get("text", "")).strip()
+
+            try:
+                importance = int(item.get("importance", 5))
+            except (TypeError, ValueError):
+                importance = 5
+        else:
+            text = str(item).strip()
+            importance = 5
+
+        if not text:
             continue
 
-        fact = fact.strip()
+        # 限制在 1–10
+        importance = max(1, min(10, importance))
 
-        if not fact:
-            continue
+        text_lower = text.lower()
 
-        fact_lower = fact.lower()
-
-        # 不保存否定、不确定或无价值记忆
-        if any(phrase in fact_lower for phrase in bad_phrases):
+        if any(phrase in text_lower for phrase in bad_phrases):
+            print(f"[Memory] Skipped low-value memory: {text}")
             continue
 
         if is_duplicate_memory(
-            fact,
+            text,
             existing_facts,
             similarity_threshold,
         ):
-            print(f"[Memory] Skipped duplicate: {fact}")
+            print(f"[Memory] Skipped duplicate: {text}")
             continue
 
-        existing_facts.append(fact)
-        print(f"[Memory] Added: {fact}")
+        new_item = {
+            "text": text,
+            "importance": importance,
+            "access_count": 0,
+            "created_at": datetime.now().isoformat(),
+            "last_accessed": None,
+        }
+
+        existing_facts.append(new_item)
+        print(
+            f"[Memory] Added importance={importance}: {text}"
+        )
 
     memory["long_term_memory"] = existing_facts
     return memory
+
 
 def load_memory():
     if not os.path.exists(MEMORY_FILE):
