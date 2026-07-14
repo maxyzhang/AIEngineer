@@ -12,3 +12,4 @@ chromadb_db/
 history.json
 
 memory.json
+conversation.json
