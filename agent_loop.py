@@ -5,6 +5,7 @@ from memory import (
     load_memory,
     save_memory,
     get_memory_text,
+    get_relevant_memory_text,
     add_conversation_turn,
     get_conversation_context,
     extract_memory,
@@ -300,7 +301,10 @@ Do not invent facts.
 
 def run(question, max_steps=6):
     memory = load_memory()
-    memory_text = get_memory_text(memory)
+    memory_text = get_relevant_memory_text(
+        question,
+        memory,
+    )
     conversation_context = get_conversation_context()
 
     history = ""
@@ -351,8 +355,11 @@ When a search action completes, that task will be marked done.
 Follow this research plan unless previous observations show enough evidence to answer.
 Choose the next unfinished step.
 
-Long-term memory:
-{memory_text}
+Relevant Long-term memory:
+{memory_text or "No relevant long-tem memory found."}
+
+Use long-tem memory only when it is directly relevant to the user's question.
+Ignore unrelated memories even if they have high importance.
 
 Recent conversation:
 {conversation_context}
@@ -434,7 +441,7 @@ Generating final answer ...
         #print("===========================================")
         plan = create_plan(
             question,
-            memory_text=memory_text,
+            memories=memory_text,
             conversation_context=conversation_context,
         )
 
@@ -443,8 +450,10 @@ Generating final answer ...
 
         action, tool_input = parse_plan(plan)
 
+        has_memory = bool(memory_text)
+
         # Guard: do not allow final before any search/reflection
-        if step == 1 and action.lower() == "final" and not memory_text.strip():
+        if step == 1 and action.lower() == "final" and not has_memory:
             print("\n[Guard] Final is not allowed before search. Forcing search.\n")
             action = "search"
             tool_input = question

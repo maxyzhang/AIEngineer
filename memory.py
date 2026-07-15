@@ -31,6 +31,93 @@ def rank_memories(items):
         reverse=True,
     )
 
+def retrieve_memories(question, memory, limit=20):
+    if not question or not question.strip():
+        return []
+
+    items = memory.get("long_term_memory", [])
+    normalized_items = []
+
+    for item in items:
+        normalized = normalize_memory_item(item)
+
+        if normalized["text"]:
+            normalized_items.append(normalized)
+
+    if not normalized_items:
+        return []
+
+    texts = [item["text"] for item in normalized_items]
+
+    embeddings = memory_model.encode(
+        [question] + texts,
+        normalize_embeddings=True,
+    )
+
+    question_embedding = embeddings[0]
+    memory_embeddings = embeddings[1:]
+
+    similarities = memory_embeddings @ question_embedding
+
+    ranked_pairs = sorted(
+        zip(normalized_items, similarities),
+        key=lambda pair: float(pair[1]),
+        reverse=True,
+    )
+
+    return [
+        {
+            **item,
+            "similarity": float(similarity),
+        }
+        for item, similarity in ranked_pairs[:limit]
+    ]
+
+def get_relevant_memory_text(
+    question,
+    memory,
+    retrieval_limit=20,
+    final_limit=8,
+    minimum_similarity=0.30,
+):
+    retrieved_items = retrieve_memories(
+        question,
+        memory,
+        limit=retrieval_limit,
+    )
+
+    scored_items = []
+
+    for item in retrieved_items:
+        similarity = float(item.get("similarity", 0.0))
+        importance = int(item.get("importance", 5))
+        access_count = int(item.get("access_count", 0))
+
+        if similarity < minimum_similarity:
+            continue
+
+        final_score = (
+            similarity * 0.80
+            + (importance / 10.0) * 0.18
+            + min(access_count, 10) / 10.0 * 0.02
+        )
+
+        scored_items.append(
+            {
+                **item,
+                "final_score": final_score,
+            }
+        )
+
+    scored_items.sort(
+        key=lambda item: item.get("final_score", 0.0),
+        reverse=True,
+    )
+
+    final_items = scored_items[:final_limit]
+
+    return final_items
+
 def normalize_memory_item(item):
     now = datetime.now().isoformat()
 
@@ -283,7 +370,6 @@ def merge_memory(
 
     memory["long_term_memory"] = existing_facts
     return memory
-
 
 def load_memory():
     if not os.path.exists(MEMORY_FILE):
