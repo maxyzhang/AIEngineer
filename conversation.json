@@ -103,5 +103,20 @@
     "question": "What do you remember my AI project",
     "answer": "I remember that your current long-term AI project is building a memory-aware AI agent.",
     "created_at": "2026-07-15T00:33:04.328922"
+  },
+  {
+    "question": "What do you remember about my AI project, and what should I build next?",
+    "answer": "I remember that your current long-term AI project is building a memory-aware AI agent. Based on that, I’d suggest building the next concrete layer: an evaluation and feedback loop for the agent’s memory system. Specifically, add tests or metrics for when the agent should remember something, retrieve it, ignore it, update it, or delete it. This would make the project more reliable and help you improve the planner, RAG, and long-term memory components systematically.",
+    "created_at": "2026-07-15T11:42:18.792431"
+  },
+  {
+    "question": "What do you remember about my AI project?",
+    "answer": "I remember that your current long-term AI project is building a memory-aware AI agent.",
+    "created_at": "2026-07-15T11:44:57.314832"
+  },
+  {
+    "question": "What should I build next for my AI project?",
+    "answer": "Your AI project is a memory-aware AI agent. I’d build the next layer: a memory evaluation and feedback system.",
+    "created_at": "2026-07-15T11:45:46.728490"
   }
 ]

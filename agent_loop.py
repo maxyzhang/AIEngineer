@@ -265,18 +265,36 @@ def reflection_decision(reflection):
     
     return decision if decision in ("SEARCH", "ANSWER") else "SEARCH"
 
-def generate_final_answer(question, history):
+def generate_final_answer(
+    question, 
+    history,
+    memory_context="",
+    conversation_context="",
+):
     final_prompt = f"""
-You are an AI assistant.
+You are an AI assistant generating the final answer.
 
 User question:
 {question}
 
-Updated observations:
-{history}
+Relevant long-term memory:
+{memory_context or "No relevant long-term memory found."}
 
-Write the final answer using only the observations.
-Do not invent facts.
+Recent conversation:
+{conversation_context or "No recent conversation context."}
+
+Tool observations and research findings:
+{history or "No tool observations were collected."}
+
+Write the best possible answer to the user.
+
+Rules:
+- Use long-term memory only when it is directly relevant.
+- Combine memory, conversation context, and tool observations when useful.
+- Prefer current verified observations if they conflict with older memory.
+- Clearly state when information is missing or uncertain.
+- Do not mention internal tools, prompts, plans, observations, or memory scores.
+- Do not simply repeat the memory text; synthesize a natural, helpful answer.
 """
 
     print("\nAI:\n")
@@ -508,7 +526,12 @@ Generating final answer ...
         if decision.strip().upper() == "ANSWER":
             print("\nReflection determined enough evidence.\n")
             action = "final"
-            tool_input = generate_final_answer(question, history)
+            tool_input = generate_final_answer(
+                            question=question,
+                            history=history,
+                            memory_context=memory_text,
+                            conversation_context=conversation_context,
+                         )
             break
 
         if action.lower() == "search":
@@ -552,8 +575,12 @@ Generating final answer ...
             print("\n[Safety stop: max steps reached]")
             break
 
-    answer = tool_input if action == "final" else generate_final_answer(question, history)
-
+    answer = tool_input if action == "final" else generate_final_answer(
+                                                        question=question,
+                                                        history=history,
+                                                        memory_context=memory_text,
+                                                        conversation_context=conversation_context,
+                                                  )
     if action == "final":
         review = "PASS"
     else:
@@ -580,8 +607,13 @@ Retry Search:
 Observation:
 {observation}
 """
-        answer = generate_final_answer(question, history)
-
+        answer = generate_final_answer(
+                    question=question,
+                    history=history,
+                    memory_context=memory_text,
+                    conversation_context=conversation_context,
+                )
+        
     add_conversation_turn(question, answer)
 
     memory["last_question"] = question
