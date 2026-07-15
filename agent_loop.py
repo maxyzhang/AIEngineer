@@ -6,6 +6,8 @@ from memory import (
     save_memory,
     get_memory_text,
     get_relevant_memory_text,
+    format_final_memory_context,
+    reinforce_memories,
     add_conversation_turn,
     get_conversation_context,
     extract_memory,
@@ -319,12 +321,22 @@ Rules:
 
 def run(question, max_steps=6):
     memory = load_memory()
-    memory_text = get_relevant_memory_text(
+    relevant_memories = get_relevant_memory_text(
         question,
         memory,
     )
+
+    memory = reinforce_memories(
+        memory,
+        relevant_memories,
+    )
+
+    save_memory(memory)
+
     conversation_context = get_conversation_context()
 
+    memory_text = format_final_memory_context(relevant_memories)
+    
     history = ""
 
     research_plan = create_research_plan(question)
@@ -450,13 +462,6 @@ Reflection determined enough evidence.
 
 Generating final answer ...
 """
-        #print("================MEMEORY========================")
-        #print(memory_text)
-        #print("=========================================")
-
-        #print("=================CONVERSATION==============")
-        #print(conversation_context)
-        #print("===========================================")
         plan = create_plan(
             question,
             memories=memory_text,

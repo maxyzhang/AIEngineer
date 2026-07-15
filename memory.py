@@ -118,6 +118,62 @@ def get_relevant_memory_text(
 
     return final_items
 
+def format_final_memory_context(retrieved_items):
+    """
+    Convert retrieved memory items into a prompt string.
+    """
+
+    if not retrieved_items:
+        return "No relevant long-term memory found."
+
+    lines = []
+
+    for item in retrieved_items:
+        if isinstance(item, dict):
+            text = item.get("text", "").strip()
+        else:
+            text = str(item).strip()
+
+        if text:
+            lines.append(f"- {text}")
+
+    return "\n".join(lines)
+
+def reinforce_memories(memory, retrieved_items):
+   if not retrieved_items:
+       return memory
+
+   now = datetime.now().isoformat()
+   stored_items = memory.get("long_term_memory", [])
+
+   retrieved_texts = {
+       str(item.get("text", "")).strip().lower()
+       for item in retrieved_items
+       if isinstance(item, dict) and item.get("text")
+   }
+
+   for stored_item in stored_items:
+       if not isinstance(stored_item, dict):
+           continue
+
+       stored_text = str(stored_item.get("text", "")).strip().lower()
+
+       if stored_text in retrieved_texts:
+           stored_item["access_count"] = int(
+               stored_item.get("access_count", 0)
+           ) + 1
+
+           stored_item["last_accessed"] = now
+
+           print(
+               f"[Memory] Reinforced "
+               f"access_count={stored_item['access_count']}: "
+               f"{stored_item.get('text', '')}"
+           )
+
+   memory["long_term_memory"] = stored_items
+   return memory
+
 def normalize_memory_item(item):
     now = datetime.now().isoformat()
 
