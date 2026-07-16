@@ -275,6 +275,22 @@ def reinforce_memories(memory, retrieved_items):
 
            stored_item["last_accessed"] = now
 
+           current_importance = int(
+               stored_item.get("importance", 5)
+           )
+
+           if (
+                stored_item["access_count"] % 5 == 0
+                and current_importance < 10
+           ):
+               stored_item["importance"] = current_importance + 1
+
+               print(
+                   "[Memory] Importance increased "
+                   f"to {stored_item['importance']}: "
+                   f"{stored_item.get('text', '')}"
+               )
+               
            print(
                f"[Memory] Reinforced "
                f"access_count={stored_item['access_count']}: "
