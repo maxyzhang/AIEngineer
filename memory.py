@@ -1,4 +1,5 @@
 import numpy as np
+import math
 from sentence_transformers import SentenceTransformer
 import json
 import os
@@ -73,6 +74,34 @@ def retrieve_memories(question, memory, limit=20):
         for item, similarity in ranked_pairs[:limit]
     ]
 
+def calculate_recency_score(item, decay_days=30):
+    """
+    Return a score between 0 and 1 based on how recently
+    the memory was accessed or created.
+    """
+
+    timestamp = (
+        item.get("last_accessed")
+        or item.get("created_at")
+    )
+
+    if not timestamp:
+        return 0.0
+
+    try:
+        memory_time = datetime.fromisoformat(timestamp)
+    except (TypeError, ValueError):
+        return 0.0
+
+    age_seconds = max(
+        (datetime.now() - memory_time).total_seconds(),
+        0.0,
+    )
+
+    age_days = age_seconds / 86400.0
+
+    return math.exp(-age_days / decay_days)
+
 def get_relevant_memory_text(
     question,
     memory,
@@ -95,20 +124,33 @@ def get_relevant_memory_text(
 
         if similarity < minimum_similarity:
             continue
+        recency_score = calculate_recency_score(item)
 
         final_score = (
-            similarity * 0.80
-            + (importance / 10.0) * 0.18
-            + min(access_count, 10) / 10.0 * 0.02
+            similarity * 0.65
+            + (importance / 10.0) * 0.15
+            + min(access_count, 10) / 10.0 * 0.10
+            + recency_score * 0.10
         )
 
         scored_items.append(
             {
                 **item,
+                "recency_score": recency_score,
                 "final_score": final_score,
             }
         )
 
+        print(
+            f"[Memory Rank] "
+            f"similarity={similarity:.3f}, "
+            f"importance={importance}, "
+            f"access={access_count}, "
+            f"recency={recency_score:.3f}, "
+            f"final={final_score:.3f}, "
+            f"{item.get('text', '')}"
+        )
+        
     scored_items.sort(
         key=lambda item: item.get("final_score", 0.0),
         reverse=True,

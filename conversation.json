@@ -123,5 +123,15 @@
     "question": "What do you remember my AI project?",
     "answer": "I remember that your current long-term AI project is building a memory-aware AI agent.",
     "created_at": "2026-07-15T18:46:41.890289"
+  },
+  {
+    "question": "What do you remember about my AI project?",
+    "answer": "I remember that your current long-term AI project is building a memory-aware AI agent.",
+    "created_at": "2026-07-15T20:08:18.063629"
+  },
+  {
+    "question": "What do you remember my AI project",
+    "answer": "I remember that your current long-term AI project is building a memory-aware AI agent.",
+    "created_at": "2026-07-15T20:15:16.549943"
   }
 ]
