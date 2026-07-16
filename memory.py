@@ -102,6 +102,70 @@ def calculate_recency_score(item, decay_days=30):
 
     return math.exp(-age_days / decay_days)
 
+def consolidate_memories(
+    items,
+    similarity_threshold=0.85,
+):
+    """
+    Remove semantically similar memories from a ranked result list.
+
+    The input order is preserved, so the highest-ranked memory in each
+    semantic group is retained.
+    """
+
+    if not items:
+        return []
+
+    normalized_items = []
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+
+        text = str(item.get("text", "")).strip()
+
+        if text:
+            normalized_items.append(item)
+
+    if len(normalized_items) <= 1:
+        return normalized_items
+
+    texts = [
+        str(item.get("text", "")).strip()
+        for item in normalized_items
+    ]
+
+    embeddings = memory_model.encode(
+        texts,
+        normalize_embeddings=True,
+    )
+
+    consolidated_items = []
+    selected_embeddings = []
+
+    for item, embedding in zip(normalized_items, embeddings):
+        is_duplicate = False
+
+        for selected_embedding in selected_embeddings:
+            similarity = float(
+                np.dot(embedding, selected_embedding)
+            )
+
+            if similarity >= similarity_threshold:
+                is_duplicate = True
+
+                print(
+                    "[Memory Consolidation] Skipped similar memory: "
+                    f"{item.get('text', '')}"
+                )
+                break
+
+        if not is_duplicate:
+            consolidated_items.append(item)
+            selected_embeddings.append(embedding)
+
+    return consolidated_items
+
 def get_relevant_memory_text(
     question,
     memory,
@@ -156,7 +220,11 @@ def get_relevant_memory_text(
         reverse=True,
     )
 
-    final_items = scored_items[:final_limit]
+    consolidated_items = consolidate_memories(
+        scored_items,
+        similarity_threshold=0.85,
+    )
+    final_items = consolidated_items[:final_limit]
 
     return final_items
 
