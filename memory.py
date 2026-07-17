@@ -319,17 +319,30 @@ def decay_memories(
         if not isinstance(item, dict):
             continue
 
-        timestamp = (
-            item.get("last_decayed_at")
-            or item.get("last_accessed")
-            or item.get("created_at")
+        timestamps = (
+            item.get("last_decayed_at"),
+            item.get("last_accessed"),
+            item.get("created_at"),
         )
 
-        if not timestamp:
+        parsed_times = []
+
+        for timestamp in timestamps:
+            if not timestamp:
+                continue
+
+            try:
+                parsed_times.append(datetime.fromisoformat(timestamp))
+            except (TypeError, ValueError):
+                continue
+        if not parsed_times:
+            continue
+
+        if not parsed_times:
             continue
 
         try:
-            reference_time = datetime.fromisoformat(timestamp)
+            reference_time = max(parsed_times)
         except (TypeError, ValueError):
             continue
 
@@ -361,6 +374,74 @@ def decay_memories(
             )
 
     memory["long_term_memory"] = stored_items
+    return memory
+
+def garbage_collect_memories(
+    memory,
+    minimum_age_days=180,
+    maximum_importance=1,
+    maximum_access_count=0,
+):
+    """
+    Remove memories only when they are old, low-importance,
+    and unused.
+
+    A memory is deleted only when all conditions are met:
+    - importance <= maximum_importance
+    - access_count <= maximum_access_count
+    - inactive for at least minimum_age_days
+    """
+
+    now = datetime.now()
+    stored_items = memory.get("long_term_memory", [])
+    retained_items = []
+
+    for item in stored_items:
+        if not isinstance(item, dict):
+            retained_items.append(item)
+            continue
+
+        importance = int(item.get("importance", 5))
+        access_count = int(item.get("access_count", 0))
+
+        reference_timestamp = (
+            item.get("last_accessed")
+            or item.get("created_at")
+        )
+
+        if not reference_timestamp:
+            retained_items.append(item)
+            continue
+
+        try:
+            reference_time = datetime.fromisoformat(
+                reference_timestamp
+            )
+        except (TypeError, ValueError):
+            retained_items.append(item)
+            continue
+
+        age_days = max(
+            (now - reference_time).total_seconds() / 86400.0,
+            0.0,
+        )
+
+        should_delete = (
+            importance <= maximum_importance
+            and access_count <= maximum_access_count
+            and age_days >= minimum_age_days
+        )
+
+        if should_delete:
+            print(
+                "[Memory GC] Removed stale memory: "
+                f"{item.get('text', '')}"
+            )
+            continue
+
+        retained_items.append(item)
+
+    memory["long_term_memory"] = retained_items
     return memory
 
 def normalize_memory_item(item):
