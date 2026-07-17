@@ -213,5 +213,25 @@
     "question": "hi",
     "answer": "Hi! How can I help you today?",
     "created_at": "2026-07-16T20:46:11.606484"
+  },
+  {
+    "question": "hello",
+    "answer": "Hello! How can I help you today?",
+    "created_at": "2026-07-16T22:16:44.494134"
+  },
+  {
+    "question": "hi",
+    "answer": "Hi! How can I help you today?",
+    "created_at": "2026-07-16T22:20:44.394703"
+  },
+  {
+    "question": "hello",
+    "answer": "Hello! How can I help you today?",
+    "created_at": "2026-07-16T22:27:48.212102"
+  },
+  {
+    "question": "hello",
+    "answer": "Hello! How can I help you today?",
+    "created_at": "2026-07-16T22:31:33.915115"
   }
 ]

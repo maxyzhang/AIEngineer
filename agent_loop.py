@@ -9,6 +9,7 @@ from memory import (
     format_final_memory_context,
     reinforce_memories,
     decay_memories,
+    garbage_collect_memories,
     add_conversation_turn,
     get_conversation_context,
     extract_memory,
@@ -323,6 +324,8 @@ Rules:
 def run(question, max_steps=6):
     memory = load_memory()
     memory = decay_memories(memory)
+    memory = garbage_collect_memories(memory)
+    
     save_memory(memory)
     
     relevant_memories = get_relevant_memory_text(
