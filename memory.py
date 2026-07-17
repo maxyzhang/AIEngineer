@@ -300,6 +300,69 @@ def reinforce_memories(memory, retrieved_items):
    memory["long_term_memory"] = stored_items
    return memory
 
+def decay_memories(
+    memory,
+    decay_interval_days=30,
+    minimum_importance=1,
+):
+    """
+    Reduce importance for memories that have not been accessed recently.
+
+    One importance point is removed for each complete decay interval.
+    Memories are never reduced below minimum_importance.
+    """
+
+    now = datetime.now()
+    stored_items = memory.get("long_term_memory", [])
+
+    for item in stored_items:
+        if not isinstance(item, dict):
+            continue
+
+        timestamp = (
+            item.get("last_decayed_at")
+            or item.get("last_accessed")
+            or item.get("created_at")
+        )
+
+        if not timestamp:
+            continue
+
+        try:
+            reference_time = datetime.fromisoformat(timestamp)
+        except (TypeError, ValueError):
+            continue
+
+        age_days = max(
+            (now - reference_time).total_seconds() / 86400.0,
+            0.0,
+        )
+
+        decay_steps = int(age_days // decay_interval_days)
+
+        if decay_steps <= 0:
+            continue
+
+        current_importance = int(item.get("importance", 5))
+        decayed_importance = max(
+            minimum_importance,
+            current_importance - decay_steps,
+        )
+
+        if decayed_importance < current_importance:
+            item["importance"] = decayed_importance
+            item["last_decayed_at"] = now.isoformat()
+
+            print(
+                "[Memory Decay] "
+                f"importance {current_importance}"
+                f" -> {decayed_importance}: "
+                f"{item.get('text', '')}"
+            )
+
+    memory["long_term_memory"] = stored_items
+    return memory
+
 def normalize_memory_item(item):
     now = datetime.now().isoformat()
 
@@ -310,6 +373,7 @@ def normalize_memory_item(item):
             "access_count": int(item.get("access_count", 0)),
             "created_at": item.get("created_at", now),
             "last_accessed": item.get("last_accessed", ""),
+            "last_decayed_at": item.get("last_decayed_at",""),
         }
 
     return {
@@ -318,6 +382,7 @@ def normalize_memory_item(item):
         "access_count": 0,
         "created_at": now,
         "last_accessed": None,
+        "last_decayed_at": item.get("last_decayed_at",""),
     }
 
 def clear_conversation_memory():

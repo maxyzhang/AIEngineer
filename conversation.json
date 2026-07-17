@@ -153,5 +153,65 @@
     "question": "What do you remember about my AI project",
     "answer": "I remember that your current long-term AI project is building a memory-aware AI agent.",
     "created_at": "2026-07-16T18:01:42.334896"
+  },
+  {
+    "question": "hello",
+    "answer": "Hello! How can I help you today?",
+    "created_at": "2026-07-16T20:26:44.743145"
+  },
+  {
+    "question": "hi",
+    "answer": "Hi! How can I help you today?",
+    "created_at": "2026-07-16T20:30:21.428553"
+  },
+  {
+    "question": "hello",
+    "answer": "Hello! How can I help you today?",
+    "created_at": "2026-07-16T20:31:03.182947"
+  },
+  {
+    "question": "hh",
+    "answer": "Hi! How can I help you today?",
+    "created_at": "2026-07-16T20:31:11.186537"
+  },
+  {
+    "question": "h",
+    "answer": "Hi! How can I help you today?",
+    "created_at": "2026-07-16T20:33:05.918262"
+  },
+  {
+    "question": "hello",
+    "answer": "Hello! How can I help you today?",
+    "created_at": "2026-07-16T20:33:13.924265"
+  },
+  {
+    "question": "hello",
+    "answer": "Hello! How can I help you today?",
+    "created_at": "2026-07-16T20:35:33.732870"
+  },
+  {
+    "question": "hi",
+    "answer": "Hi! How can I help you today?",
+    "created_at": "2026-07-16T20:35:41.315057"
+  },
+  {
+    "question": "h",
+    "answer": "Hi! How can I help you today?",
+    "created_at": "2026-07-16T20:39:09.845460"
+  },
+  {
+    "question": "k",
+    "answer": "How can I help you today?",
+    "created_at": "2026-07-16T20:39:17.888133"
+  },
+  {
+    "question": "hello",
+    "answer": "Hello! How can I help you today?",
+    "created_at": "2026-07-16T20:46:03.371493"
+  },
+  {
+    "question": "hi",
+    "answer": "Hi! How can I help you today?",
+    "created_at": "2026-07-16T20:46:11.606484"
   }
 ]
