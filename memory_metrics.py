@@ -3,11 +3,13 @@ import os
 from collections import Counter
 from typing import Any
 from datetime import datetime
+from pathlib import Path
 
 
 AUDIT_LOG_FILE = "memory_audit.jsonl"
 MEMORY_FILE = "memory.json"
 REPORT_FILE = "memory_report.json"
+REPORT_HISTORY_DIR = "memory_reports"
 
 
 def load_audit_events(
@@ -349,11 +351,16 @@ def export_memory_report(
                 ensure_ascii=False,
             )
 
+        snapshot_file = save_memory_report_snapshot(report)
         print(
             "\n[Memory Report Export]"
         )
         print("=" * 50)
-        print(f"Report written to: {report_file}")
+        print(f"Latest report : {report_file}")
+
+        if snapshot_file:
+            print(f"History snapshot: {snapshot_file}")
+            
         print("=" * 50)
 
         return True
@@ -364,6 +371,48 @@ def export_memory_report(
             error,
         )
         return False
+
+def save_memory_report_snapshot(
+    report: dict[str, Any],
+    history_dir: str = REPORT_HISTORY_DIR,
+) -> str | None:
+    """
+    Save a timestamped copy of the memory report.
+    """
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    history_path = Path(history_dir)
+    snapshot_file = history_path / f"memory_report_{timestamp}.json"
+
+    try:
+        history_path.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        with snapshot_file.open(
+            "w",
+            encoding="utf-8",
+        ) as file:
+            json.dump(
+                report,
+                file,
+                indent=2,
+                ensure_ascii=False,
+            )
+
+        print(
+            f"History snapshot: {snapshot_file}"
+        )
+
+        return str(snapshot_file)
+
+    except OSError as error:
+        print(
+            "[Memory Report History] "
+            f"Failed to write snapshot: {error}"
+        )
+        return None
 
 def print_memory_recommendations(
     recommendations: list[str],
