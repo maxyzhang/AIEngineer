@@ -233,5 +233,10 @@
     "question": "hello",
     "answer": "Hello! How can I help you today?",
     "created_at": "2026-07-16T22:31:33.915115"
+  },
+  {
+    "question": "What do you remember about my AI project",
+    "answer": "Your main AI project is a long-term memory agent.",
+    "created_at": "2026-07-18T00:28:13.814699"
   }
 ]

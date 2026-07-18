@@ -9,9 +9,45 @@ from openai_client import get_client
 MEMORY_FILE = "memory.json"
 HISTORY_FILE = "history.json"  # agent step history
 CONVERSATION_FILE = "conversation.json"  # user chat history
+AUDIT_LOG_FILE = "memory_audit.jsonl"
 
 client = get_client()
 memory_model = SentenceTransformer("all-MiniLM-L6-v2")
+
+def log_memory_event(
+    event_type,
+    memory_text,
+    details=None,
+):
+    """
+    Append one memory lifecycle event as a JSON line.
+    """
+
+    event = {
+        "timestamp": datetime.now().isoformat(),
+        "event_type": event_type,
+        "memory_text": str(memory_text).strip(),
+        "details": details or {},
+    }
+
+    try:
+        with open(
+            AUDIT_LOG_FILE,
+            "a",
+            encoding="utf-8",
+        ) as f:
+            f.write(
+                json.dumps(
+                    event,
+                    ensure_ascii=False,
+                )
+                + "\n"
+            )
+    except OSError as error:
+        print(
+            "[Memory Audit] Failed to write event:",
+            error,
+        )
 
 def rank_memories(items):
     normalized_items = []
@@ -158,6 +194,16 @@ def consolidate_memories(
                     "[Memory Consolidation] Skipped similar memory: "
                     f"{item.get('text', '')}"
                 )
+
+                log_memory_event(
+                    "consolidated",
+                    item.get("text", ""),
+                    {
+                        "reason": "semantic_similarity",
+                        "similarity_threshold": similarity_threshold,
+                    },
+                )
+
                 break
 
         if not is_duplicate:
@@ -272,9 +318,19 @@ def reinforce_memories(memory, retrieved_items):
            stored_item["access_count"] = int(
                stored_item.get("access_count", 0)
            ) + 1
-
+        
            stored_item["last_accessed"] = now
 
+           log_memory_event(
+               "reinforced",
+               stored_item.get("text", ""),
+               {
+                   "access_count": stored_item["access_count"],
+                   "importance": stored_item.get("importance", 5),
+                   "last_accessed": stored_item["last_accessed"],
+               },
+           )
+          
            current_importance = int(
                stored_item.get("importance", 5)
            )
@@ -283,8 +339,18 @@ def reinforce_memories(memory, retrieved_items):
                 stored_item["access_count"] % 5 == 0
                 and current_importance < 10
            ):
+               old_importance = current_importance
                stored_item["importance"] = current_importance + 1
 
+               log_memory_event(
+                   "importance_increased",
+                   stored_item.get("text", ""),
+                   {
+                        "old_importance": old_importance,
+                        "new_importance": stored_item["importance"],
+                        "access_count": stored_item["access_count"],
+                   },
+               )
                print(
                    "[Memory] Importance increased "
                    f"to {stored_item['importance']}: "
@@ -373,6 +439,18 @@ def decay_memories(
                 f"{item.get('text', '')}"
             )
 
+            log_memory_event(
+                "decayed",
+                item.get("text", ""),
+                {
+                    "old_importance": current_importance,
+                    "new_importance": decayed_importance,
+                    "decay_steps": decay_steps,
+                    "age_days": round(age_days, 2),
+                    "last_decayed_at": item["last_decayed_at"],
+                },
+            )
+
     memory["long_term_memory"] = stored_items
     return memory
 
@@ -436,6 +514,16 @@ def garbage_collect_memories(
             print(
                 "[Memory GC] Removed stale memory: "
                 f"{item.get('text', '')}"
+            )
+
+            log_memory_event(
+                "garbage_collected",
+                item.ge("text", ""),
+                {
+                    "importance": importance,
+                    "access_count": access_count,
+                    "age_days": round(age_days, 2),
+                },
             )
             continue
 
