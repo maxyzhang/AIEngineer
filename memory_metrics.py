@@ -171,6 +171,99 @@ def summarize_memory_health(
         "never_accessed_memories": never_accessed_count,
     }
 
+def generate_memory_health_warnings(
+    health: dict[str, Any],
+    stale_ratio_threshold: float = 0.40,
+    never_accessed_ratio_threshold: float = 0.40,
+    minimum_average_importance: float = 4.0,
+    minimum_high_value_memories: int = 1,
+) -> list[str]:
+    """
+    Generate warnings based on memory health indicators.
+    """
+
+    warnings: list[str] = []
+
+    total_memories = int(
+        health.get("total_memories", 0)
+    )
+
+    if total_memories <= 0:
+        warnings.append(
+            "No persistent long-term memories are available."
+        )
+        return warnings
+
+    stale_memories = int(
+        health.get("stale_memories", 0)
+    )
+
+    never_accessed_memories = int(
+        health.get("never_accessed_memories", 0)
+    )
+
+    high_value_memories = int(
+        health.get("high_value_memories", 0)
+    )
+
+    average_importance = float(
+        health.get("average_importance", 0.0)
+    )
+
+    stale_ratio = stale_memories / total_memories
+    never_accessed_ratio = (
+        never_accessed_memories / total_memories
+    )
+
+    if stale_ratio >= stale_ratio_threshold:
+        warnings.append(
+            "A high percentage of memories are stale: "
+            f"{stale_memories}/{total_memories} "
+            f"({stale_ratio:.0%})."
+        )
+
+    if (
+        never_accessed_ratio
+        >= never_accessed_ratio_threshold
+    ):
+        warnings.append(
+            "A high percentage of memories have never been "
+            f"accessed: {never_accessed_memories}/"
+            f"{total_memories} "
+            f"({never_accessed_ratio:.0%})."
+        )
+
+    if average_importance < minimum_average_importance:
+        warnings.append(
+            "Average memory importance is low: "
+            f"{average_importance:.2f}."
+        )
+
+    if high_value_memories < minimum_high_value_memories:
+        warnings.append(
+            "No high-value memories are currently available."
+        )
+
+    return warnings
+
+def print_memory_health_warnings(
+    warnings: list[str],
+) -> None:
+    """
+    Print memory health warnings.
+    """
+
+    print("\n[Memory Health Warnings]")
+    print("=" * 50)
+
+    if not warnings:
+        print("No health warnings detected.")
+    else:
+        for warning in warnings:
+            print(f"- {warning}")
+
+    print("=" * 50)
+
 def get_latest_audit_timestamp(
     events: list[dict[str, Any]],
 ) -> str:
@@ -324,6 +417,10 @@ def main() -> None:
         events
     )
 
+    warnings = generate_memory_health_warnings(
+        health_summary
+    )
+
     print_memory_metrics(metrics_summary)
 
     print_memory_health(
@@ -331,6 +428,7 @@ def main() -> None:
         latest_audit_timestamp,
     )
 
+    print_memory_health_warnings(warnings)
 
 if __name__ == "__main__":
     main()
