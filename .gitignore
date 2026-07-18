@@ -13,3 +13,5 @@ history.json
 
 memory.json
 conversation.json
+
+memory_audit.jsonl
