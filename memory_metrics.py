@@ -553,7 +553,9 @@ def export_memory_report(
     health_summary: dict[str, Any],
     warnings: list[str],
     recommendations: list[str],
-    latest_audit_timestamp: str,
+       latest_audit_timestamp: str,
+    trend_comparison: dict[str, any],
+    trend_status: str,
     report_file: str = REPORT_FILE,
 ) -> bool:
     """
@@ -567,6 +569,10 @@ def export_memory_report(
         "health": health_summary,
         "warnings": warnings,
         "recommendations": recommendations,
+        "trend": {
+            "status": trend_status,
+            "comparison": trend_comparison,
+        },
     }
 
     try:
@@ -867,6 +873,8 @@ def main() -> None:
         warnings,
         recommendations,
         latest_audit_timestamp,
+        trend_comparison,
+        trend_status,
     )
 
 if __name__ == "__main__":
