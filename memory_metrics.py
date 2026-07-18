@@ -7,6 +7,7 @@ from datetime import datetime
 
 AUDIT_LOG_FILE = "memory_audit.jsonl"
 MEMORY_FILE = "memory.json"
+REPORT_FILE = "memory_report.json"
 
 
 def load_audit_events(
@@ -314,6 +315,56 @@ def generate_memory_recommendations(
 
     return recommendations
 
+def export_memory_report(
+    metrics_summary: dict[str, Any],
+    health_summary: dict[str, Any],
+    warnings: list[str],
+    recommendations: list[str],
+    latest_audit_timestamp: str,
+    report_file: str = REPORT_FILE,
+) -> bool:
+    """
+    Export the complete memory observability report as JSON.
+    """
+
+    report = {
+        "generated_at": datetime.now().isoformat(),
+        "latest_audit_event": latest_audit_timestamp,
+        "metrics": metrics_summary,
+        "health": health_summary,
+        "warnings": warnings,
+        "recommendations": recommendations,
+    }
+
+    try:
+        with open(
+            report_file,
+            "w",
+            encoding="utf-8",
+        ) as file:
+            json.dump(
+                report,
+                file,
+                indent=2,
+                ensure_ascii=False,
+            )
+
+        print(
+            "\n[Memory Report Export]"
+        )
+        print("=" * 50)
+        print(f"Report written to: {report_file}")
+        print("=" * 50)
+
+        return True
+
+    except OSError as error:
+        print(
+            "[Memory Report Export] Failed to write report:",
+            error,
+        )
+        return False
+
 def print_memory_recommendations(
     recommendations: list[str],
 ) -> None:
@@ -521,6 +572,14 @@ def main() -> None:
 
     print_memory_health_warnings(warnings)
     print_memory_recommendations(recommendations)
+
+    export_memory_report(
+        metrics_summary,
+        health_summary,
+        warnings,
+        recommendations,
+        latest_audit_timestamp,
+    )
 
 if __name__ == "__main__":
     main()
