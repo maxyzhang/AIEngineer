@@ -246,6 +246,92 @@ def generate_memory_health_warnings(
 
     return warnings
 
+def generate_memory_recommendations(
+    health: dict[str, Any],
+    warnings: list[str],
+) -> list[str]:
+    """
+    Generate recommended actions from memory health indicators.
+    """
+
+    recommendations: list[str] = []
+
+    total_memories = int(
+        health.get("total_memories", 0)
+    )
+
+    stale_memories = int(
+        health.get("stale_memories", 0)
+    )
+
+    never_accessed_memories = int(
+        health.get("never_accessed_memories", 0)
+    )
+
+    high_value_memories = int(
+        health.get("high_value_memories", 0)
+    )
+
+    average_importance = float(
+        health.get("average_importance", 0.0)
+    )
+
+    if total_memories <= 0:
+        recommendations.append(
+            "Add durable user facts before evaluating memory health."
+        )
+        return recommendations
+
+    if stale_memories > 0:
+        recommendations.append(
+            "Review stale memories and run decay or garbage "
+            "collection where appropriate."
+        )
+
+    if never_accessed_memories > 0:
+        recommendations.append(
+            "Review memory extraction quality and remove facts "
+            "that are too vague or unlikely to be retrieved."
+        )
+
+    if average_importance < 4.0:
+        recommendations.append(
+            "Review importance scoring rules and verify that "
+            "durable facts receive appropriate initial scores."
+        )
+
+    if high_value_memories <= 0:
+        recommendations.append(
+            "Review reinforcement thresholds so frequently useful "
+            "memories can become high-value."
+        )
+
+    if not warnings:
+        recommendations.append(
+            "No immediate action is required. Continue monitoring "
+            "memory lifecycle metrics."
+        )
+
+    return recommendations
+
+def print_memory_recommendations(
+    recommendations: list[str],
+) -> None:
+    """
+    Print recommended memory maintenance actions.
+    """
+
+    print("\n[Memory Recommendations]")
+    print("=" * 50)
+
+    if not recommendations:
+        print("No recommendations available.")
+    else:
+        for recommendation in recommendations:
+            print(f"- {recommendation}")
+
+    print("=" * 50)
+
 def print_memory_health_warnings(
     warnings: list[str],
 ) -> None:
@@ -421,6 +507,11 @@ def main() -> None:
         health_summary
     )
 
+    recommendations = generate_memory_recommendations(
+        health_summary,
+        warnings,
+    )
+
     print_memory_metrics(metrics_summary)
 
     print_memory_health(
@@ -429,6 +520,7 @@ def main() -> None:
     )
 
     print_memory_health_warnings(warnings)
+    print_memory_recommendations(recommendations)
 
 if __name__ == "__main__":
     main()
