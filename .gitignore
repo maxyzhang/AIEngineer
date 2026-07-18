@@ -16,3 +16,4 @@ conversation.json
 
 memory_audit.jsonl
 memory_report.json
+memory_reports/
