@@ -11,6 +11,237 @@ MEMORY_FILE = "memory.json"
 REPORT_FILE = "memory_report.json"
 REPORT_HISTORY_DIR = "memory_reports"
 
+def load_recent_memory_reports(
+    history_dir: str = REPORT_HISTORY_DIR,
+    limit: int = 2,
+) -> list[dict[str, Any]]:
+    """
+    Load the most recent valid historical memory reports.
+    """
+
+    history_path = Path(history_dir)
+
+    if not history_path.exists():
+        return []
+
+    report_files = sorted(
+        history_path.glob("memory_report_*.json"),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+
+    reports: list[dict[str, Any]] = []
+
+    for report_file in report_files:
+        try:
+            with report_file.open(
+                "r",
+                encoding="utf-8",
+            ) as file:
+                report = json.load(file)
+
+            if isinstance(report, dict):
+                reports.append(report)
+
+        except (OSError, json.JSONDecodeError) as error:
+            print(
+                "[Memory Trends] "
+                f"Skipped invalid report {report_file.name}: {error}"
+            )
+            continue
+
+        if len(reports) >= limit:
+            break
+
+    return reports
+
+def compare_memory_reports(
+    reports: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """
+    Compare the two most recent memory reports.
+    """
+
+    if len(reports) < 2:
+        return {
+            "available": False,
+            "message": "At least two historical reports are required.",
+        }
+
+    latest = reports[0]
+    previous = reports[1]
+
+    latest_health = latest.get("health", {})
+    previous_health = previous.get("health", {})
+
+    latest_warnings = latest.get("warnings", [])
+    previous_warnings = previous.get("warnings", [])
+
+    def number(
+        source: dict[str, Any],
+        key: str,
+    ) -> float:
+        try:
+            return float(source.get(key, 0))
+        except (TypeError, ValueError):
+            return 0.0
+
+    return {
+        "available": True,
+        "latest_generated_at": latest.get(
+            "generated_at",
+            "Unknown",
+        ),
+        "previous_generated_at": previous.get(
+            "generated_at",
+            "Unknown",
+        ),
+        "changes": {
+            "total_memories": (
+                number(latest_health, "total_memories")
+                - number(previous_health, "total_memories")
+            ),
+            "average_importance": round(
+                number(latest_health, "average_importance")
+                - number(previous_health, "average_importance"),
+                2,
+            ),
+            "average_access_count": round(
+                number(latest_health, "average_access_count")
+                - number(previous_health, "average_access_count"),
+                2,
+            ),
+            "stale_memories": (
+                number(latest_health, "stale_memories")
+                - number(previous_health, "stale_memories")
+            ),
+            "high_value_memories": (
+                number(latest_health, "high_value_memories")
+                - number(previous_health, "high_value_memories")
+            ),
+            "never_accessed_memories": (
+                number(latest_health, "never_accessed_memories")
+                - number(previous_health, "never_accessed_memories")
+            ),
+            "warning_count": (
+                len(latest_warnings)
+                - len(previous_warnings)
+            ),
+        },
+    }
+
+def assess_memory_trend(
+    comparison: dict[str, Any],
+) -> str:
+    """
+    Classify the overall memory health trend.
+    """
+
+    if not comparison.get("available"):
+        return "Insufficient history"
+
+    changes = comparison.get("changes", {})
+
+    score = 0
+
+    if changes.get("stale_memories", 0) < 0:
+        score += 1
+    elif changes.get("stale_memories", 0) > 0:
+        score -= 1
+
+    if changes.get("never_accessed_memories", 0) < 0:
+        score += 1
+    elif changes.get("never_accessed_memories", 0) > 0:
+        score -= 1
+
+    if changes.get("average_importance", 0) > 0:
+        score += 1
+    elif changes.get("average_importance", 0) < 0:
+        score -= 1
+
+    if changes.get("average_access_count", 0) > 0:
+        score += 1
+    elif changes.get("average_access_count", 0) < 0:
+        score -= 1
+
+    if changes.get("high_value_memories", 0) > 0:
+        score += 1
+    elif changes.get("high_value_memories", 0) < 0:
+        score -= 1
+
+    if changes.get("warning_count", 0) < 0:
+        score += 1
+    elif changes.get("warning_count", 0) > 0:
+        score -= 1
+
+    if score > 0:
+        return "Improving"
+
+    if score < 0:
+        return "Declining"
+
+    return "Stable"
+
+def print_memory_trend(
+    comparison: dict[str, Any],
+    trend_status: str,
+) -> None:
+    """
+    Print the comparison between the two latest reports.
+    """
+
+    print("\n[Memory Trend]")
+    print("=" * 50)
+
+    if not comparison.get("available"):
+        print(comparison.get("message"))
+        print("=" * 50)
+        return
+
+    changes = comparison.get("changes", {})
+
+    print(
+        "Previous report: "
+        f"{comparison.get('previous_generated_at')}"
+    )
+    print(
+        "Latest report: "
+        f"{comparison.get('latest_generated_at')}"
+    )
+    print("-" * 50)
+
+    print(
+        f"Total memories change: "
+        f"{changes.get('total_memories', 0):+g}"
+    )
+    print(
+        f"Average importance change: "
+        f"{changes.get('average_importance', 0):+g}"
+    )
+    print(
+        f"Average access count change: "
+        f"{changes.get('average_access_count', 0):+g}"
+    )
+    print(
+        f"Stale memories change: "
+        f"{changes.get('stale_memories', 0):+g}"
+    )
+    print(
+        f"High-value memories change: "
+        f"{changes.get('high_value_memories', 0):+g}"
+    )
+    print(
+        f"Never-accessed memories change: "
+        f"{changes.get('never_accessed_memories', 0):+g}"
+    )
+    print(
+        f"Warnings change: "
+        f"{changes.get('warning_count', 0):+g}"
+    )
+
+    print("-" * 50)
+    print(f"Overall trend: {trend_status}")
+    print("=" * 50)
 
 def load_audit_events(
     audit_file: str = AUDIT_LOG_FILE,
@@ -401,10 +632,6 @@ def save_memory_report_snapshot(
                 ensure_ascii=False,
             )
 
-        print(
-            f"History snapshot: {snapshot_file}"
-        )
-
         return str(snapshot_file)
 
     except OSError as error:
@@ -612,6 +839,14 @@ def main() -> None:
         warnings,
     )
 
+    recent_reports = load_recent_memory_reports()
+    trend_comparison = compare_memory_reports(
+        recent_reports
+    )
+    trend_status = assess_memory_trend(
+        trend_comparison
+    )
+
     print_memory_metrics(metrics_summary)
 
     print_memory_health(
@@ -621,6 +856,10 @@ def main() -> None:
 
     print_memory_health_warnings(warnings)
     print_memory_recommendations(recommendations)
+    print_memory_trend(
+        trend_comparison,
+        trend_status,
+    )
 
     export_memory_report(
         metrics_summary,
