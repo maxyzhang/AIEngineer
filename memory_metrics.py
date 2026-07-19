@@ -1,9 +1,11 @@
 import json
 import os
+import argparse
 from collections import Counter
 from typing import Any
 from datetime import datetime
 from pathlib import Path
+
 
 
 AUDIT_LOG_FILE = "memory_audit.jsonl"
@@ -19,6 +21,11 @@ def load_recent_memory_reports(
     Load the most recent valid historical memory reports.
     """
 
+    limit = max(limit, 0)
+
+    if limit == 0:
+        return []
+    
     history_path = Path(history_dir)
 
     if not history_path.exists():
@@ -553,10 +560,12 @@ def export_memory_report(
     health_summary: dict[str, Any],
     warnings: list[str],
     recommendations: list[str],
-       latest_audit_timestamp: str,
+    latest_audit_timestamp: str,
     trend_comparison: dict[str, any],
     trend_status: str,
     report_file: str = REPORT_FILE,
+    history_dir: str = REPORT_HISTORY_DIR,
+    save_history: bool = True,
 ) -> bool:
     """
     Export the complete memory observability report as JSON.
@@ -588,7 +597,14 @@ def export_memory_report(
                 ensure_ascii=False,
             )
 
-        snapshot_file = save_memory_report_snapshot(report)
+        snapshot_file = None
+
+        if save_history:
+            snapshot_file = save_memory_report_snapshot(
+                report,
+                history_dir=history_dir,
+                )
+            
         print(
             "\n[Memory Report Export]"
         )
@@ -597,6 +613,8 @@ def export_memory_report(
 
         if snapshot_file:
             print(f"History snapshot: {snapshot_file}")
+        elif not save_history:
+            print("History snapshot: disabled")
             
         print("=" * 50)
 
@@ -824,8 +842,60 @@ def print_memory_metrics(
 
     print("=" * 50)
 
+def parse_arguments() -> argparse.Namespace:
+    """
+    Parse command-line options for memory reporting.
+    """
+
+    parser = argparse.ArgumentParser(
+        description=(
+            "Generate memory lifecycle metrics, health analysis, "
+            "trend comparison, and JSON reports."
+        )
+    )
+
+    parser.add_argument(
+        "--report-file",
+        default=REPORT_FILE,
+        help=(
+            "Path for the latest JSON report. "
+            f"Default: {REPORT_FILE}"
+        ),
+    )
+
+    parser.add_argument(
+        "--history-dir",
+        default=REPORT_HISTORY_DIR,
+        help=(
+            "Directory containing historical reports. "
+            f"Default: {REPORT_HISTORY_DIR}"
+        ),
+    )
+
+    parser.add_argument(
+        "--history-limit",
+        type=int,
+        default=2,
+        help=(
+            "Number of recent historical reports to load. "
+            "A minimum of 2 is required for trend comparison."
+        ),
+    )
+
+    parser.add_argument(
+        "--no-history",
+        action="store_true",
+        help=(
+            "Generate the latest report without saving "
+            "a historical snapshot."
+        ),
+    )
+
+    return parser.parse_args()
 
 def main() -> None:
+    args = parse_arguments()
+
     events = load_audit_events()
     memory = load_memory_data()
 
@@ -868,13 +938,16 @@ def main() -> None:
     )
 
     export_memory_report(
-        metrics_summary,
-        health_summary,
-        warnings,
-        recommendations,
-        latest_audit_timestamp,
-        trend_comparison,
-        trend_status,
+        metrics_summary=metrics_summary,
+        health_summary=health_summary,
+        warnings=warnings,
+        recommendations=recommendations,
+        latest_audit_timestamp=latest_audit_timestamp,
+        trend_comparison=trend_comparison,
+        trend_status=trend_status,
+        report_file=args.report_file,
+        history_dir=args.history_dir,
+        save_history=not args.no_history,
     )
 
 if __name__ == "__main__":
