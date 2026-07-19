@@ -20,3 +20,7 @@ memory_reports/
 
 custom_memory_report.json
 test_memory_reports/
+
+.coverage
+.coverage.*
+hmlcov/

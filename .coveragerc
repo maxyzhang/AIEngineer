@@ -1,0 +1,8 @@
+[run]
+source = memory_metrics
+patch = subprocess
+parallel  = true
+
+[report]
+show_missing = true
+skip_covered = false
