@@ -1,6 +1,7 @@
 import json
 import os
 import argparse
+import sys
 from collections import Counter
 from typing import Any
 from datetime import datetime
@@ -12,6 +13,55 @@ AUDIT_LOG_FILE = "memory_audit.jsonl"
 MEMORY_FILE = "memory.json"
 REPORT_FILE = "memory_report.json"
 REPORT_HISTORY_DIR = "memory_reports"
+
+def validate_arguments(
+    args: argparse.Namespace,
+) -> list[str]:
+    """
+    Validate command-line options and return any errors.
+    """
+
+    errors: list[str] = []
+
+    if args.history_limit < 2:
+        errors.append(
+            "--history-limit must be at least 2."
+        )
+
+    report_path = Path(args.report_file)
+
+    if report_path.exists() and report_path.is_dir():
+        errors.append(
+            "--report-file must point to a file, "
+            "not a directory."
+        )
+
+    history_path = Path(args.history_dir)
+
+    if history_path.exists() and not history_path.is_dir():
+        errors.append(
+            "--history-dir must point to a directory."
+        )
+
+    return errors
+
+def print_cli_errors(
+    errors: list[str],
+) -> None:
+    """
+    Print command-line validation errors.
+    """
+
+    print(
+        "\n[CLI Validation Error]",
+        file=sys.stderr,
+    )
+    print("=" * 50, file=sys.stderr)
+
+    for error in errors:
+        print(f"- {error}", file=sys.stderr)
+
+    print("=" * 50, file=sys.stderr)
 
 def load_recent_memory_reports(
     history_dir: str = REPORT_HISTORY_DIR,
@@ -896,6 +946,12 @@ def parse_arguments() -> argparse.Namespace:
 def main() -> None:
     args = parse_arguments()
 
+    validation_errors = validate_arguments(args)
+
+    if validation_errors:
+        print_cli_errors(validation_errors)
+        return 2
+    
     events = load_audit_events()
     memory = load_memory_data()
 
@@ -937,7 +993,7 @@ def main() -> None:
         trend_status,
     )
 
-    export_memory_report(
+    export_succeeded = export_memory_report(
         metrics_summary=metrics_summary,
         health_summary=health_summary,
         warnings=warnings,
@@ -950,5 +1006,10 @@ def main() -> None:
         save_history=not args.no_history,
     )
 
+    if not export_succeeded:
+        return 1
+    
+    return 0
+
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
