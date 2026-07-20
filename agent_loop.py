@@ -22,8 +22,6 @@ from typing import Any
 from workflows.tool_workflow import execute_tool_workflow
 from workflows.tool_workflow_planner import create_tool_workflow
 
-client = get_client()
-
 query_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 def create_research_plan(question):
@@ -49,7 +47,7 @@ Research Plan:
 2. ...
 3. ...
 """
-
+    client = get_client()
     response = client.chat.completions.create(
         model="gpt-5.5",
         messages=[{"role": "user", "content": prompt}],
@@ -116,6 +114,7 @@ SEARCH
 Reason:
 ...
 """
+    client = get_client()
 
     response = client.chat.completions.create(
         model="gpt-5.5",
@@ -221,6 +220,7 @@ or
 
 RETRY: search query
 """
+    client = get_client()
 
     response = client.chat.completions.create(
         model="gpt-5.5",
@@ -306,7 +306,7 @@ Rules:
 """
 
     print("\nAI:\n")
-
+    client = get_client()
     stream = client.chat.completions.create(
         model="gpt-5.5",
         messages=[{"role": "user", "content": final_prompt}],
