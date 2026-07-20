@@ -1,15 +1,18 @@
 import re
 from typing import Any, Callable
 
-from tool_router import call_tool
-
-
 ToolCaller = Callable[[str, str], Any]
 
 REFERENCE_PATTERN = re.compile(
     r"\{\{([A-Za-z_][A-Za-z0-9_-]*)\.result\}\}"
 )
 
+def default_tool_caller(tool:str, tool_input:str) -> Any:
+    """Load and call the project tool router only when execution needs it."""
+
+    from tool_router import call_tool
+
+    return call_tool(tool, tool_input)
 
 def validate_workflow_steps(
     steps: Any,
@@ -92,7 +95,7 @@ def execute_tool_workflow(
     steps: list[dict[str, Any]],
     *,
     max_steps: int = 10,
-    tool_caller: ToolCaller = call_tool,
+    tool_caller: ToolCaller = default_tool_caller,
 ) -> dict[str, Any]:
     """Execute validated tool steps in order and return results and trace."""
 
