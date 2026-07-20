@@ -1,14 +1,14 @@
-from tools.calculator_tool import run as calculator_tool
-from tools.search_tool import run as search_tool
-
-TOOLS = {
-    "calculator": calculator_tool,
-    "search": search_tool,
-}
-
 def call_tool(action, tool_input):
-    tool = TOOLS.get(action.lower())
-    if tool is None:
-        return f"unknown tool: {action}"
+    action = action.lower().strip()
 
-    return tool(tool_input)
+    if action == "calculator":
+        from tools.calculator_tool import run as calculator_tool
+
+        return calculator_tool(tool_input)
+    
+    if action == "search":
+        from tools.search_tool import run as search_tool
+
+        return search_tool(tool_input)
+
+    return f"unknown tool: {action}"
