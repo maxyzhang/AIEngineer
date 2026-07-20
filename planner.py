@@ -1,7 +1,5 @@
 from openai_client import get_client
 
-client = get_client()
-
 def format_memory_context(memories):
     if not memories:
         return "No relevant long-term memory found."
@@ -36,6 +34,8 @@ def create_plan(
     memories=None, 
     conversation_context="",
 ):
+    client = get_client()
+
     memory_context = format_memory_context(memories)
 
     prompt = f"""
