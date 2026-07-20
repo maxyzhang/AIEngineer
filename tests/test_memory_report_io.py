@@ -6,6 +6,7 @@ from memory_metrics import (
     export_memory_report,
     load_recent_memory_reports,
     validate_memory_report,
+    get_memory_report_validation_errors,
 )
 
 def make_report(
@@ -321,3 +322,60 @@ def test_validate_memory_report_rejects_invalid_health() -> None:
 
     assert validate_memory_report(report) is False 
 
+def test_validation_errors_for_non_dictionary() -> None:
+    errors = get_memory_report_validation_errors([])
+
+    assert errors == ["Report must be a dictionary"]
+
+
+def test_validation_errors_include_missing_top_level_field() -> None:
+    report = valid_report()
+    del report["health"]
+
+    errors = get_memory_report_validation_errors(report)
+
+    assert "Missing required field: health" in errors
+
+
+def test_validation_errors_include_invalid_top_level_type() -> None:
+    report = valid_report()
+    report["warnings"] = "No warnings"
+
+    errors = get_memory_report_validation_errors(report)
+
+    assert "Invalid type for warnings: expected list" in errors
+
+
+def test_validation_errors_include_missing_nested_field() -> None:
+    report = valid_report()
+    del report["metrics"]["total_events"]
+
+    errors = get_memory_report_validation_errors(report)
+
+    assert "Missing required field: metrics.total_events" in errors
+
+
+def test_validation_errors_include_invalid_nested_type() -> None:
+    report = valid_report()
+    report["health"]["average_importance"] = "high"
+
+    errors = get_memory_report_validation_errors(report)
+
+    assert (
+        "Invalid type for health.average_importance: "
+        "expected int or float"
+    ) in errors
+
+
+def test_validation_errors_can_report_multiple_problems() -> None:
+    report = valid_report()
+    del report["generated_at"]
+    report["metrics"]["unique_memories"] = "2"
+
+    errors = get_memory_report_validation_errors(report)
+
+    assert "Missing required field: generated_at" in errors
+    assert (
+        "Invalid type for metrics.unique_memories: expected int"
+    ) in errors
+    assert len(errors) == 2

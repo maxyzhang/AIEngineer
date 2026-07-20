@@ -63,11 +63,23 @@ def print_cli_errors(
 
     print("=" * 50, file=sys.stderr)
 
-def validate_memory_report(report: Any) -> bool:
-    """Return True when a memory report has the required structure."""
+def _format_expected_types(
+    expected_type: type | tuple[type, ...],
+) -> str:
+    """Format one or more expected Python types for validation messages."""
+
+    if isinstance(expected_type, tuple):
+        return " or ".join(item.__name__ for item in expected_type)
+
+    return expected_type.__name__
+
+def get_memory_report_validation_errors(report: Any) -> list[str]:
+    """Return validation errors for a memory report."""
+
+    errors: list[str] = []
 
     if not isinstance(report, dict):
-        return False
+        return ["Report must be a dictionary"]
 
     required_fields = {
         "generated_at": str,
@@ -80,39 +92,62 @@ def validate_memory_report(report: Any) -> bool:
 
     for field_name, expected_type in required_fields.items():
         if field_name not in report:
-            return False
+            errors.append(f"Missing required field: {field_name}")
+            continue
 
         if not isinstance(report[field_name], expected_type):
-            return False
+            errors.append(
+                f"Invalid type for {field_name}: "
+                f"expected {expected_type.__name__}"
+            )
 
-    required_metrics = {
-        "total_events": int,
-        "unique_memories": int,
-        "event_counts": dict,
-    }
+    metrics = report.get("metrics")
+    if isinstance(metrics, dict):
+        required_metrics = {
+            "total_events": int,
+            "unique_memories": int,
+            "event_counts": dict,
+        }
 
-    for field_name, expected_type in required_metrics.items():
-        value = report["metrics"].get(field_name)
+        for field_name, expected_type in required_metrics.items():
+            if field_name not in metrics:
+                errors.append(
+                    f"Missing required field: metrics.{field_name}"
+                )
+            elif not isinstance(metrics[field_name], expected_type):
+                errors.append(
+                    f"Invalid type for metrics.{field_name}: "
+                    f"expected {expected_type.__name__}"
+                )
 
-        if not isinstance(value, expected_type):
-            return False
+    health = report.get("health")
+    if isinstance(health, dict):
+        required_health = {
+            "total_memories": int,
+            "average_importance": (int, float),
+            "average_access_count": (int, float),
+            "stale_memories": int,
+            "high_value_memories": int,
+            "never_accessed_memories": int,
+        }
 
-    required_health = {
-        "total_memories": int,
-        "average_importance": (int, float),
-        "average_access_count": (int, float),
-        "stale_memories": int,
-        "high_value_memories": int,
-        "never_accessed_memories": int,
-    }
+        for field_name, expected_type in required_health.items():
+            if field_name not in health:
+                errors.append(
+                    f"Missing required field: health.{field_name}"
+                )
+            elif not isinstance(health[field_name], expected_type):
+                errors.append(
+                    f"Invalid type for health.{field_name}: "
+                    f"expected {_format_expected_types(expected_type)}"
+                )
 
-    for field_name, expected_type in required_health.items():
-        value = report["health"].get(field_name)
+    return errors
 
-        if not isinstance(value, expected_type):
-            return False
+def validate_memory_report(report: Any) -> bool:
+    """Return True when a memory report has the required structure."""
 
-    return True
+    return not get_memory_report_validation_errors(report)
 
 def load_recent_memory_reports(
     history_dir: str = REPORT_HISTORY_DIR,
