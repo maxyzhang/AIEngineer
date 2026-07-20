@@ -4,15 +4,27 @@ from sentence_transformers import SentenceTransformer
 import json
 import os
 from datetime import datetime
+from typing import Any
 from openai_client import get_client
+
+_memory_client: Any | None = None
 
 MEMORY_FILE = "memory.json"
 HISTORY_FILE = "history.json"  # agent step history
 CONVERSATION_FILE = "conversation.json"  # user chat history
 AUDIT_LOG_FILE = "memory_audit.jsonl"
 
-client = get_client()
 memory_model = SentenceTransformer("all-MiniLM-L6-v2")
+
+def get_memory_client() -> Any:
+    """Create the OpenAI client only when memory processing needs it."""
+
+    global _memory_client
+
+    if _memory_client is None:
+        _memory_client = get_client()
+
+    return _memory_client
 
 def log_memory_event(
     event_type,
@@ -636,7 +648,7 @@ Return ONLY JSON in this format:
 }}
 """
 
-    response = client.chat.completions.create(
+    response = get_memory_client.chat.completions.create(
         model="gpt-5.5",
         messages=[{"role": "user", "content": prompt}],
     )
