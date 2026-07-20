@@ -5,6 +5,7 @@ from typing import Any
 from memory_metrics import (
     export_memory_report,
     load_recent_memory_reports,
+    validate_memory_report,
 )
 
 def make_report(
@@ -259,3 +260,64 @@ def test_export_memory_report_writes_history_snapshot(
 
     assert snapshot["health"]["total_memories"] == 0
     assert snapshot["trend"]["status"] == "Insufficient history"
+
+def valid_report() -> dict:
+    return {
+        "generated_at": "2026-07-19T10:00:00",
+        "metrics": {
+            "total_events": 2,
+            "unique_memories": 2,
+            "event_counts": {
+                "consolidated": 1,
+                "reinforced": 1,
+            },
+        },
+        "health": {
+            "total_memories": 5,
+            "average_importance": 4.6,
+            "average_access_count": 2.0,
+            "stale_memories": 3,
+            "high_value_memories": 2,
+            "never_accessed_memories": 2,
+        },
+        "warnings": [],
+        "recommendations": [],
+        "trend": {"status": "stable"},
+    }
+
+
+def test_validate_memory_report_accepts_valid_report() -> None:
+    assert validate_memory_report(valid_report()) is True
+
+
+def test_validate_memory_report_rejects_non_dictionary() -> None:
+    assert validate_memory_report([]) is False
+
+
+def test_validate_memory_report_rejects_missing_required_field() -> None:
+    report = valid_report()
+    del report["health"]
+
+    assert validate_memory_report(report) is False
+
+
+def test_validate_memory_report_rejects_invalid_top_level_type() -> None:
+    report = valid_report()
+    report["warnings"] = "No warnings"
+
+    assert validate_memory_report(report) is False
+
+
+def test_validate_memory_report_rejects_invalid_metrics() -> None:
+    report = valid_report()
+    report["metrics"]["total_events"] = "2"
+
+    assert validate_memory_report(report) is False
+
+
+def test_validate_memory_report_rejects_invalid_health() -> None:
+    report = valid_report()
+    report["health"]["average_importance"] = "high"
+
+    assert validate_memory_report(report) is False 
+
