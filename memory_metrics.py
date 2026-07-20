@@ -63,6 +63,57 @@ def print_cli_errors(
 
     print("=" * 50, file=sys.stderr)
 
+def validate_memory_report(report: Any) -> bool:
+    """Return True when a memory report has the required structure."""
+
+    if not isinstance(report, dict):
+        return False
+
+    required_fields = {
+        "generated_at": str,
+        "metrics": dict,
+        "health": dict,
+        "warnings": list,
+        "recommendations": list,
+        "trend": dict,
+    }
+
+    for field_name, expected_type in required_fields.items():
+        if field_name not in report:
+            return False
+
+        if not isinstance(report[field_name], expected_type):
+            return False
+
+    required_metrics = {
+        "total_events": int,
+        "unique_memories": int,
+        "event_counts": dict,
+    }
+
+    for field_name, expected_type in required_metrics.items():
+        value = report["metrics"].get(field_name)
+
+        if not isinstance(value, expected_type):
+            return False
+
+    required_health = {
+        "total_memories": int,
+        "average_importance": (int, float),
+        "average_access_count": (int, float),
+        "stale_memories": int,
+        "high_value_memories": int,
+        "never_accessed_memories": int,
+    }
+
+    for field_name, expected_type in required_health.items():
+        value = report["health"].get(field_name)
+
+        if not isinstance(value, expected_type):
+            return False
+
+    return True
+
 def load_recent_memory_reports(
     history_dir: str = REPORT_HISTORY_DIR,
     limit: int = 2,
@@ -97,8 +148,13 @@ def load_recent_memory_reports(
             ) as file:
                 report = json.load(file)
 
-            if isinstance(report, dict):
+            if validate_memory_report(report):
                 reports.append(report)
+            else:
+                print(
+                    "[Memory Trends] "
+                    f"Skipped report with invalid structure: {report_file.name}"
+                )
 
         except (OSError, json.JSONDecodeError) as error:
             print(
