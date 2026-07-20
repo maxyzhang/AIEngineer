@@ -19,6 +19,10 @@ import math
 from sentence_transformers import SentenceTransformer
 from tool_router import call_tool
 from planner import create_plan
+from typing import Any
+
+from workflows.tool_workflow import execute_tool_workflow
+from workflows.tool_workflow_planner import create_tool_workflow
 
 client = get_client()
 
@@ -320,8 +324,122 @@ Rules:
     print()
     return answer
 
+def format_workflow_observation(
+    workflow_execution: dict[str, Any],
+) -> str:
+    """Format workflow execution results for final answer generation."""
+
+    lines = [
+        "Structured Tool Workflow Results:",
+        f"Status: {workflow_execution.get('status', 'unknown')}",
+    ]
+
+    trace = workflow_execution.get("trace", [])
+
+    for entry in trace:
+        step_id = entry.get("id", "unknown")
+        tool = entry.get("tool", "unknown")
+        resolved_input = entry.get("resolved_input")
+        status = entry.get("status", "unknown")
+        result = entry.get("result")
+        error = entry.get("error")
+
+        lines.extend(
+            [
+                "",
+                f"Step: {step_id}",
+                f"Tool: {tool}",
+                f"Input: {resolved_input}",
+                f"Status: {status}",
+            ]
+        )
+
+        if status == "completed":
+            lines.append(f"Result: {result}")
+
+        if error:
+            lines.append(f"Error: {error}")
+
+    errors = workflow_execution.get("errors", [])
+
+    if errors:
+        lines.append("")
+        lines.append("Workflow Errors:")
+
+        for error in errors:
+            lines.append(f"- {error}")
+
+    return "\n".join(lines)
+
+
+def run_structured_tool_workflow(
+    question: str,
+    *,
+    max_steps: int = 6,
+) -> dict[str, Any]:
+    """Plan and execute a structured multi-step tool workflow."""
+
+    workflow_plan = create_tool_workflow(
+        question,
+        max_steps=max_steps,
+    )
+
+    if workflow_plan["status"] != "valid":
+        return {
+            "status": "planning_failed",
+            "plan": workflow_plan,
+            "execution": None,
+            "observation": "",
+        }
+
+    execution = execute_tool_workflow(
+        workflow_plan["steps"],
+        max_steps=max_steps,
+    )
+
+    observation = format_workflow_observation(execution)
+
+    return {
+        "status": execution["status"],
+        "plan": workflow_plan,
+        "execution": execution,
+        "observation": observation,
+    }
+
+
+def try_structured_tool_workflow(
+    question: str,
+    *,
+    max_steps: int = 6,
+) -> str | None:
+    """Execute a structured workflow and return an answer when successful."""
+
+    workflow_result = run_structured_tool_workflow(
+        question,
+        max_steps=max_steps,
+    )
+
+    if workflow_result["status"] != "completed":
+        return None
+
+    observation = workflow_result["observation"]
+
+    return generate_final_answer(
+        question=question,
+        history=observation,
+        memory_context="",
+        conversation_context="",
+    )
 
 def run(question, max_steps=6):
+    structured_answer = try_structured_tool_workflow(
+        question,
+        max_steps=max_steps,
+    )
+
+    if structured_answer is not None:
+        return structured_answer
+    
     memory = load_memory()
     memory = decay_memories(memory)
     memory = garbage_collect_memories(memory)
