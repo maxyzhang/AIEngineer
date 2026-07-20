@@ -83,7 +83,7 @@ def load_recent_memory_reports(
 
     report_files = sorted(
         history_path.glob("memory_report_*.json"),
-        key=lambda path: path.stat().st_mtime,
+        key=lambda path: path.name,
         reverse=True,
     )
 
