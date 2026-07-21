@@ -22,6 +22,13 @@ from typing import Any
 from workflows.tool_workflow import execute_tool_workflow
 from workflows.tool_workflow_planner import create_tool_workflow
 
+from workflow_trace import (
+    complete_workflow_trace,
+    fail_workflow_trace,
+    save_workflow_trace,
+    start_workflow_trace,
+)
+
 query_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 def create_research_plan(question):
@@ -392,12 +399,41 @@ def run_structured_tool_workflow(
             "observation": "",
         }
 
+    workflow_trace = start_workflow_trace(
+        question=question,
+        workflow=workflow_plan,
+    )
     execution = execute_tool_workflow(
         workflow_plan["steps"],
         max_steps=max_steps,
     )
 
     observation = format_workflow_observation(execution)
+
+    workflow_trace["steps"] = execution.get("trace", [])
+    workflow_trace["execution_status"] = execution["status"]
+    workflow_trace["results"] = execution.get("results", {})
+    workflow_trace["observation"] = observation
+
+    if execution["status"] == "completed":
+        complete_workflow_trace(
+            trace=workflow_trace,
+            final_answer=observation,
+        )
+    else:
+        errors = execution.get("errors", [])
+
+        fail_workflow_trace(
+            trace=workflow_trace,
+            error=(
+                "; ".join(str(error) for error in errors)
+                if errors
+                else f"Workflow status: {execution['status']}"
+            ),
+            fallback_used=True,
+        )
+    
+    save_workflow_trace(workflow_trace)
 
     return {
         "status": execution["status"],
@@ -754,3 +790,6 @@ Observation:
     save_memory(memory)
 
     return answer
+
+
+

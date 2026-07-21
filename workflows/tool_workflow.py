@@ -1,5 +1,7 @@
 import re
 from typing import Any, Callable
+from datetime import datetime
+from time import perf_counter
 
 ToolCaller = Callable[[str, str], Any]
 
@@ -116,6 +118,7 @@ def execute_tool_workflow(
     trace: list[dict[str, Any]] = []
 
     for index, step in enumerate(steps):
+        step_started_perf = perf_counter()
         step_id = step["id"]
         tool = step["tool"].strip().lower()
         raw_input = step["arguments"]["input"]
@@ -126,6 +129,9 @@ def execute_tool_workflow(
             "tool": tool,
             "raw_input": raw_input,
             "resolved_input": None,
+            "started_at": datetime.now().isoformat(),
+            "completed_at": None,
+            "duration_ms": None,
             "status": "pending",
             "result": None,
             "error": None,
@@ -150,10 +156,20 @@ def execute_tool_workflow(
             results[step_id] = result
             trace_entry["result"] = result
             trace_entry["status"] = "completed"
+            trace_entry["completed_at"] = datetime.now().isoformat()
+            trace_entry["duration_ms"] = round(
+                (perf_counter() - step_started_perf) * 1000,
+                2,
+            )
 
         except Exception as error:
             trace_entry["status"] = "failed"
             trace_entry["error"] = str(error)
+            trace_entry["completed_at"] = datetime.now().isoformat()
+            trace_entry["duration_ms"] = round(
+                (perf_counter() - step_started_perf) * 1000,
+                2,
+            )
             trace.append(trace_entry)
 
             return {

@@ -24,3 +24,5 @@ test_memory_reports/
 .coverage
 .coverage.*
 hmlcov/
+
+workflow_trace.jsonl
