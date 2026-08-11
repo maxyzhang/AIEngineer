@@ -30,6 +30,7 @@ from workflow_trace import (
 )
 
 from evaluation.recovery import ConfidenceRecovery
+from evaluation.escalation import EscalationPolicy
 
 query_model = SentenceTransformer("all-MiniLM-L6-v2")
 
@@ -862,6 +863,29 @@ Observation:
         print(f"Recovered: {recovery_result.recovered}") 
         print(f"Stop reason: {recovery_result.stop_reason}")
 
+        escalation_policy = EscalationPolicy(
+            escalation_threshold=0.65
+        )
+
+        escalation = escalation_policy.evaluate(
+            confidence=recovery_result.confidence,
+            recovered=recovery_result.recovered,
+            stop_reason=recovery_result.stop_reason,
+        )
+
+        print("\n[Escalation_Decision]")
+        print(f"Escalate: {escalation.escalate}")
+        print(f"Severity: {escalation.severity}")
+        print(f"Reason: {escalation.reason}")
+
+        if escalation.escalate:
+            print("\n[Human Review Required]")
+            print(
+                f"Low-confidence answer requires human review "
+                f"(confidence={escalation.confidence:.2f}, "
+                f"reason={escalation.reason})"
+            )   
+            
         if recovery_result.evidence:
             history += f"""
 Confidence Recovery:
