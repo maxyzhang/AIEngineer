@@ -249,4 +249,4 @@ Max Zhang
 
 Senior Software Engineer
 
-AI Infrastructure | HPC | RAG | Agentic AI | LLM Applications
+AI Infrastructure | HPC | RAG | Agentic AI | LLM Applicationsgit 

@@ -29,6 +29,8 @@ from workflow_trace import (
     start_workflow_trace,
 )
 
+from evaluation.recovery import ConfidenceRecovery
+
 query_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 def create_research_plan(question):
@@ -467,6 +469,33 @@ def try_structured_tool_workflow(
         conversation_context="",
     )
 
+# --------------------------------------------------------------------
+# PR67: Confidence-aware decision
+# --------------------------------------------------------------------
+def estimate_confidence(answer, history, review):
+    score = 0.50
+
+    # Reflection / grounding signal
+    if review.strip().upper() == "PASS":
+        score += 0.25
+
+    if review.startswith("RETRY:"):
+        score -= 0.25
+
+    #Evidence signal
+    observation_count = history.count("Observation:")
+
+    if observation_count >= 2:
+        score += 0.15
+    elif observation_count == 1:
+        score += 0.05
+
+    # Basic answer completeness signal
+    if answer and len(answer.strip()) >= 80:
+        score += 0.10
+
+    return max(0.0, min(score, 1.0))
+    
 def run(question, max_steps=6):
     structured_answer = try_structured_tool_workflow(
         question,
@@ -755,23 +784,90 @@ Generating final answer ...
     print("\n[Answer Review]")
     print(review)
 
-    if review.startswith("RETRY:"):
-        tool_input = review.replace("RETRY:", "").strip()
+    confidence = estimate_confidence(
+        answer=answer,
+        history=history,
+        review=review,
+    )
 
-        print("\n[Retry Search]")
-        print(tool_input)
+    print(f"\n[Confidence] {confidence:.2f}")
+    confidence_threshold = 0.65
 
-        observation = call_tool("search", tool_input)
+    needs_retry = (
+        review.startswith("RETRY:")
+        or confidence < confidence_threshold
+    )
 
-        print("\n[Retry Observation]")
-        print(observation)
+    if needs_retry:
+        recovery = ConfidenceRecovery(
+            confidence_threshold=confidence_threshold,
+            max_retries=2,
+        )
 
-        history += f"""
-Retry Search:
-{tool_input}
+        if review.startswith("RETRY:"):
+            tool_input = review.replace("RETRY:", "").strip()
+        else:
+            tool_input = question
+
+        def retrieve_for_recovery(query, top_k):
+            print(
+                f"\n[Confidence Recovery Search]"
+                f"\nquery={query}"
+                f"\ntop_k={top_k}"
+            )
+            return call_tool("search", query)
+
+        def evaluate_recovery(query, evidence):
+            recovery_history = history + f"""
+Confidence Recovery Search:
+{query}
 
 Observation:
-{observation}
+{evidence}
+"""
+            recovery_answer = generate_final_answer(
+                question=question,
+                history=recovery_history,
+                memory_context=memory_text,
+                conversation_context=conversation_context,
+            )
+
+            recovery_review = reflect_answer(
+                question,
+                recovery_history,
+                reflect_answer,
+            )
+
+            return estimate_confidence(
+                answer=recovery_answer,
+                history=recovery_history,
+                review=recovery_review,
+            )
+
+        if review.startswith("RETRY:"):
+            recovery_query = review.replace("RETRY:", "").strip()
+        else:
+            recovery_query = question
+
+        recovery_result = recovery.recover(
+            query=recovery_query,
+            confidence=confidence,
+            retrieve_fn=retrieve_for_recovery,
+            evaluate_fn=evaluate_recovery,
+        )
+
+        print("\n[Confidence Recovery]")
+        print(f"Attempts: {recovery_result.attempts}")
+        print(f"Confidence: {recovery_result.confidence:.2f}")
+        print(f"Recovered: {recovery_result.recovered}") 
+        print(f"Stop reason: {recovery_result.stop_reason}")
+
+        if recovery_result.evidence:
+            history += f"""
+Confidence Recovery:
+
+Observation:
+{recovery_result.evidence}
 """
         answer = generate_final_answer(
                     question=question,
@@ -790,6 +886,3 @@ Observation:
     save_memory(memory)
 
     return answer
-
-
-
