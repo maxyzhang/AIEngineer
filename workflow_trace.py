@@ -36,9 +36,43 @@ def start_workflow_trace(
         "steps": [],
         "status": "running",
         "fallback_used": False,
+        "reliability": {
+            "confidence_before_recovery": None,
+            "confidence_after_recovery": None,
+            "recovery_attempts": 0,
+            "recovered": None,
+            "recovery_stop_reason": None,
+            "escalated": False,
+            "escalation_severity": "none",
+            "escalation_reason": None,
+        },
         "_started_perf": perf_counter(),
     }
 
+def record_reliability_trace(
+    trace: dict[str, Any],
+    *,
+    confidence_before_recovery: float,
+    confidence_after_recovery: float,
+    recovery_attempts: int,
+    recovered: bool,
+    recovery_stop_reason: str,
+    escalated: bool,
+    escalation_severity: str,
+    escalation_reason: str,
+) -> None:
+    """Record confidence recovery and escalation metadata."""
+
+    trace["reliability"] = {
+        "confidence_before_recovery": confidence_before_recovery,
+        "confidence_after_recovery": confidence_after_recovery,
+        "recovery_attempts": recovery_attempts,
+        "recovered": recovered,
+        "recovery_stop_reason": recovery_stop_reason,
+        "escalated": escalated,
+        "escalation_severity": escalation_severity,
+        "escalation_reason": escalation_reason,
+    }
 
 def start_step_trace(
     *,
@@ -177,12 +211,14 @@ def fail_workflow_trace(
 def save_workflow_trace(
     trace: dict[str, Any],
     *,
-    trace_file: str = TRACE_FILE,
+    trace_file: str | None = None,
 ) -> bool:
     """
     Append one workflow trace as a JSON Lines record.
     """
-
+    if trace_file is None:
+        trace_file = TRACE_FILE
+        
     safe_trace = {
         key: value
         for key, value in trace.items()

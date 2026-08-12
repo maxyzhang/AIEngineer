@@ -25,6 +25,7 @@ from workflows.tool_workflow_planner import create_tool_workflow
 from workflow_trace import (
     complete_workflow_trace,
     fail_workflow_trace,
+    record_reliability_trace,
     save_workflow_trace,
     start_workflow_trace,
 )
@@ -505,7 +506,15 @@ def run(question, max_steps=6):
 
     if structured_answer is not None:
         return structured_answer
-    
+
+    agent_trace = start_workflow_trace(
+        question=question,
+        workflow={
+            "type": "research_agent",
+            "max_steps": max_steps,
+        }
+    )
+
     memory = load_memory()
     memory = decay_memories(memory)
     memory = garbage_collect_memories(memory)
@@ -873,6 +882,18 @@ Observation:
             stop_reason=recovery_result.stop_reason,
         )
 
+        record_reliability_trace(
+            agent_trace,
+            confidence_before_recovery=confidence,
+            confidence_after_recovery=recovery_result.confidence,
+            recovery_attempts=recovery_result.attempts,
+            recovered=recovery_result.recovered,
+            recovery_stop_reason=recovery_result.stop_reason,
+            escalated=escalation.escalate,
+            escalation_severity=escalation.severity,
+            escalation_reason=escalation.reason,
+        )
+
         print("\n[Escalation_Decision]")
         print(f"Escalate: {escalation.escalate}")
         print(f"Severity: {escalation.severity}")
@@ -909,4 +930,9 @@ Observation:
     memory = merge_memory(memory, new_facts)
     save_memory(memory)
 
+    complete_workflow_trace(
+        trace=agent_trace,
+        final_answer=answer,
+    )
+    save_workflow_trace(agent_trace)
     return answer
